@@ -1,4 +1,5 @@
 // Default coordinates for Älta, Sweden
+
 let currentLocation = {
     name: "Älta, Sweden",
     latitude: 59.26,
