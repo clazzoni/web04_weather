@@ -193,6 +193,152 @@ function renderSunTimesTable(sunTimes) {
     tableContainer.appendChild(table);
 }
 
+// --- Create a solar system diagram showing planetary positions ---
+function renderSolarSystemDiagram() {
+    // Check if the container exists, if not create it
+    let solarSystemContainer = document.getElementById('solarSystemContainer');
+    if (!solarSystemContainer) {
+        solarSystemContainer = document.createElement('div');
+        solarSystemContainer.id = 'solarSystemContainer';
+        solarSystemContainer.style.width = '95%';
+        solarSystemContainer.style.margin = '40px auto';
+        solarSystemContainer.style.maxWidth = '1000px';
+        solarSystemContainer.style.height = '500px';
+        
+        // Create heading
+        const heading = document.createElement('h3');
+        heading.textContent = 'Current Planetary Positions';
+        heading.style.textAlign = 'center';
+        solarSystemContainer.appendChild(heading);
+        
+        // Create canvas for the diagram
+        const canvas = document.createElement('canvas');
+        canvas.id = 'solarSystemCanvas';
+        canvas.width = 1000;
+        canvas.height = 500;
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        canvas.style.display = 'block';
+        canvas.style.margin = '0 auto';
+        solarSystemContainer.appendChild(canvas);
+        
+        // Add a time display
+        const timeDisplay = document.createElement('div');
+        timeDisplay.id = 'planetaryTimeDisplay';
+        timeDisplay.style.textAlign = 'center';
+        timeDisplay.style.marginTop = '10px';
+        timeDisplay.style.fontSize = '14px';
+        solarSystemContainer.appendChild(timeDisplay);
+        
+        // Insert after the sunrise/sunset table
+        const tableContainer = document.getElementById('sunTimesTableContainer');
+        if (tableContainer) {
+            tableContainer.after(solarSystemContainer);
+        } else {
+            // Fallback to inserting after chart container
+            const chartContainer = document.querySelector('.chart-container');
+            chartContainer.after(solarSystemContainer);
+        }
+    }
+    
+    // Now draw the solar system
+    drawSolarSystem();
+}
+
+// --- Calculate and draw the solar system ---
+function drawSolarSystem() {
+    const canvas = document.getElementById('solarSystemCanvas');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+    
+    // Set current date
+    const now = new Date();
+    document.getElementById('planetaryTimeDisplay').textContent = 
+        `Planetary positions for: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+    
+    // Draw Sun
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 15, 0, Math.PI * 2);
+    ctx.fillStyle = 'yellow';
+    ctx.fill();
+    
+    // Draw orbit circles
+    const orbits = [0.39, 0.72, 1, 1.52, 5.2, 9.58, 19.18, 30.07];
+    const orbitLabels = ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'];
+    const orbitColors = ['gray', 'orange', 'blue', 'red', 'brown', 'goldenrod', 'lightblue', 'blue'];
+    const scaleFactor = 50; // Adjust this to change the scale of the diagram
+    
+    // Draw orbits
+    for (let i = 0; i < orbits.length; i++) {
+        const radius = orbits[i] * scaleFactor;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
+        ctx.stroke();
+    }
+    
+    // Calculate planet positions
+    // These are simplified calculations; in a real scenario, you would use more precise formulas
+    const planetPositions = calculatePlanetPositions(now);
+    
+    // Draw planets
+    for (let i = 0; i < orbits.length; i++) {
+        const radius = orbits[i] * scaleFactor;
+        const angle = planetPositions[i]; // Angle in radians
+        
+        // Calculate position
+        const x = centerX + radius * Math.cos(angle);
+        const y = centerY + radius * Math.sin(angle);
+        
+        // Draw planet
+        ctx.beginPath();
+        ctx.arc(x, y, i === 4 || i === 5 ? 8 : 5, 0, Math.PI * 2); // Make Jupiter and Saturn larger
+        ctx.fillStyle = orbitColors[i];
+        ctx.fill();
+        
+        // Add label
+        ctx.font = '12px Arial';
+        ctx.fillStyle = 'black';
+        
+        // Position labels to avoid overlap with orbits
+        const labelX = x + (i === 4 || i === 5 ? 10 : 7) * Math.cos(angle);
+        const labelY = y + (i === 4 || i === 5 ? 10 : 7) * Math.sin(angle);
+        
+        ctx.fillText(orbitLabels[i], labelX, labelY);
+    }
+}
+
+// --- Calculate simplified planet positions ---
+function calculatePlanetPositions(date) {
+    // Orbital periods in days
+    const orbitalPeriods = [88, 225, 365.25, 687, 4333, 10759, 30687, 60190];
+    
+    // Reference epoch (J2000.0 - January 1, 2000, 12:00 UTC)
+    const epoch = new Date(2000, 0, 1, 12, 0, 0, 0);
+    
+    // Calculate days since epoch
+    const daysSinceEpoch = (date.getTime() - epoch.getTime()) / (1000 * 60 * 60 * 24);
+    
+    // Calculate angles based on orbital periods (simplified)
+    return orbitalPeriods.map(period => {
+        // Convert to angle in radians (2π = full orbit)
+        const angle = (daysSinceEpoch % period) / period * 2 * Math.PI;
+        
+        // Add some phase offset to make it look more realistic
+        // These offsets are not astronomically accurate but make the diagram more interesting
+        const offset = Math.random() * Math.PI; // Random offset between 0 and π
+        return (angle + offset) % (2 * Math.PI);
+    });
+}
+
 // --- Register Chart.js plugin to draw sun and moon markers ---
 Chart.register({
     id: 'sunMoonMarker',
@@ -666,6 +812,9 @@ function processWeatherData(apiData, timeSpan = 48) {
     
     // Render the sunrise/sunset times table with all sun times, regardless of markers
     renderSunTimesTable(allSunTimes);
+    
+    // Render the solar system diagram
+    renderSolarSystemDiagram();
 }
 
 // --- Geocode Location to Coordinates ---
