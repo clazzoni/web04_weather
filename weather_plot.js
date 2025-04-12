@@ -10,8 +10,8 @@ const ctx = document.getElementById('weatherChart').getContext('2d');
 let weatherChart; // Variable to hold the chart instance
 
 // --- Fetch Weather Data ---
-async function getWeatherData() {
-    console.log("Fetching weather data from:", apiUrl);
+async function getWeatherData(timeSpan = 48) {
+    console.log(`Fetching weather data from: ${apiUrl} for ${timeSpan} hours`);
     try {
         // IMPORTANT: MET Norway API requires a unique User-Agent header.
         // Replace 'YourAppName/1.0 yourcontact@example.com' with your actual app name/contact.
@@ -28,7 +28,7 @@ async function getWeatherData() {
 
         const data = await response.json();
         console.log("API Data Received:", data);
-        processWeatherData(data);
+        processWeatherData(data, timeSpan);
 
     } catch (error) {
         console.error("Error fetching weather data:", error);
@@ -39,7 +39,7 @@ async function getWeatherData() {
 }
 
 // --- Process Data and Create Chart ---
-function processWeatherData(apiData) {
+function processWeatherData(apiData, timeSpan = 48) {
     if (!apiData.properties || !apiData.properties.timeseries) {
         console.error("Invalid API data structure:", apiData);
         return;
@@ -47,9 +47,9 @@ function processWeatherData(apiData) {
 
     const timeseries = apiData.properties.timeseries;
 
-    // Limit to the next 48 hours (or adjust as needed)
+    // Use the provided timeSpan parameter instead of hardcoded 48 hours
     const now = new Date();
-    const endTime = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+    const endTime = new Date(now.getTime() + timeSpan * 60 * 60 * 1000);
 
     const labels = []; // X-axis labels (time)
     const temps = [];  // Y-axis data (temperature)
@@ -219,5 +219,65 @@ function processWeatherData(apiData) {
     });
 }
 
+// --- Create Time Span Dropdown ---
+function createTimeSpanDropdown() {
+    // Create dropdown container
+    const dropdownContainer = document.createElement('div');
+    dropdownContainer.className = 'timespan-selector';
+    dropdownContainer.style.marginTop = '15px';
+    dropdownContainer.style.textAlign = 'center';
+    
+    // Create label
+    const label = document.createElement('label');
+    label.textContent = 'Time Span: ';
+    label.setAttribute('for', 'timeSpanSelect');
+    
+    // Create select element
+    const select = document.createElement('select');
+    select.id = 'timeSpanSelect';
+    
+    // Add options
+    const options = [
+        { value: '24', text: '24 hours' },
+        { value: '72', text: '72 hours' },
+        { value: '168', text: '1 week (168h)' },
+        { value: '240', text: '10 days (240h)' }
+    ];
+    
+    options.forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.text;
+        // Default to 48 hours to match original behavior
+        if (opt.value === '48') {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
+    
+    // Add event listener
+    select.addEventListener('change', handleTimeSpanChange);
+    
+    // Assemble dropdown
+    dropdownContainer.appendChild(label);
+    dropdownContainer.appendChild(select);
+    
+    // Add after the chart container
+    const chartContainer = document.querySelector('.chart-container');
+    chartContainer.after(dropdownContainer);
+}
+
+// --- Handle Dropdown Change ---
+function handleTimeSpanChange() {
+    const timeSpan = parseInt(document.getElementById('timeSpanSelect').value);
+    getWeatherData(timeSpan);
+}
+
+// --- Initialize the App ---
+function initializeWeatherApp() {
+    createTimeSpanDropdown();
+    getWeatherData(48); // Default to 48 hours
+}
+
 // --- Initial Load ---
-getWeatherData();
+initializeWeatherApp();
