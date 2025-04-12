@@ -108,6 +108,17 @@ function processWeatherData(apiData, timeSpan = 48) {
     console.log("Processed Rain:", rain);
     console.log("Processed Clouds:", clouds);
 
+    // Determine the appropriate grid step size based on the time span
+    let gridStepSize = 1; // Default 1 hour
+    if (timeSpan > 168) { // 10 days (240h)
+        gridStepSize = 12;
+    } else if (timeSpan > 72) { // 1 week (168h)
+        gridStepSize = 6;
+    } else if (timeSpan > 48) { // 72 hours
+        gridStepSize = 2;
+    }
+    
+    console.log(`Using grid step size: ${gridStepSize}h for ${timeSpan}h timespan`);
 
     // --- Create the Chart using Chart.js ---
     if (weatherChart) {
@@ -203,44 +214,113 @@ function processWeatherData(apiData, timeSpan = 48) {
                         displayFormats: {
                             hour: 'HH:mm', // Format for hour labels
                             day: 'ddd' // Add day name format (Mon, Tue, Wed, etc.)
-                        }
+                        },
+                        // Dynamic step size based on timespan
+                        stepSize: gridStepSize,
+                        bounds: 'ticks',
+                        distribution: 'linear'
                     },
                     title: {
                         display: false, // Changed to false to remove the title
                     },
                     ticks: {
+                        source: 'auto', // Changed from 'data' to use automatic tick generation
+                        maxRotation: 0, // Prevent label rotation
+                        autoSkip: true, // Allow skipping some ticks for better readability
+                        autoSkipPadding: 20, // Add padding between ticks that are shown
+                        includeBounds: true,
+                        major: {
+                            enabled: true // Enable major ticks for midnight
+                        },
                         callback: function(value, index, ticks) {
+                            // Safety check
+                            if (!value) return '';
+                            
                             const date = new Date(value);
                             const hours = date.getHours();
                             
-                            // If midnight (start of day), show the day name
+                            // Always show day names at midnight
                             if (hours === 0) {
-                                return date.toLocaleDateString('en-US', {weekday: 'short'});
+                                // Get day name, make it uppercase, and apply HTML styling for bold and larger font
+                                const dayName = date.toLocaleDateString('en-US', {weekday: 'short'}).toUpperCase();
+                                return `<span style="font-weight: bold; font-size: 200%">${dayName}</span>`;
                             } 
-                            // For other hours, just show the time
+                            
+                            // For other hours, show time based on density
+                            if (ticks.length > 48) {
+                                // For longer periods, only show noon
+                                return hours === 12 ? '12:00' : '';
+                            }
+                            
                             return date.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: false});
+                        },
+                    },
+                    afterBuildTicks: function(scale) {
+                        // Ensure midnight ticks are included regardless of time span
+                        const ticks = scale.ticks;
+                        const startDay = new Date(ticks[0].value);
+                        startDay.setHours(0, 0, 0, 0); // Set to midnight
+                        
+                        const endDay = new Date(ticks[ticks.length - 1].value);
+                        endDay.setHours(0, 0, 0, 0); // Set to midnight
+                        
+                        // Calculate number of days
+                        const days = Math.ceil((endDay - startDay) / (24 * 60 * 60 * 1000)) + 1;
+                        
+                        // For each day, ensure we have a midnight tick
+                        for (let i = 0; i < days; i++) {
+                            const midnightDate = new Date(startDay);
+                            midnightDate.setDate(startDay.getDate() + i);
+                            
+                            // Mark this date for a grid line
+                            scale._midnightDates = scale._midnightDates || [];
+                            scale._midnightDates.push(midnightDate.getTime());
                         }
                     },
                     grid: {
                         color: function(context) {
-                            // Add safety check for when context.tick is undefined
-                            if (!context.tick || context.tick.value === undefined) {
-                                return 'rgba(0, 0, 0, 0.1)';
+                            // Special handling for midnight lines to ensure they're visible
+                            if (context.tick && context.tick.value) {
+                                const date = new Date(context.tick.value);
+                                const hours = date.getHours();
+                                const minutes = date.getMinutes();
+                                
+                                // Make midnight grid lines significantly darker
+                                if (hours === 0 && minutes === 0) {
+                                    return 'rgba(0, 0, 0, 0.5)';
+                                }
                             }
                             
-                            const date = new Date(context.tick.value);
-                            // Make midnight grid lines significantly darker for day separation
-                            return date.getHours() === 0 ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.1)';
+                            // Check against our saved midnight dates
+                            const scale = context.chart.scales.x;
+                            if (scale._midnightDates && context.tick && 
+                                scale._midnightDates.includes(context.tick.value)) {
+                                return 'rgba(0, 0, 0, 0.5)';
+                            }
+                            
+                            return 'rgba(0, 0, 0, 0.1)';
                         },
                         lineWidth: function(context) {
-                            // Add safety check for when context.tick is undefined
-                            if (!context.tick || context.tick.value === undefined) {
-                                return 1;
+                            // Special handling for midnight lines to ensure they're visible
+                            if (context.tick && context.tick.value) {
+                                const date = new Date(context.tick.value);
+                                const hours = date.getHours();
+                                const minutes = date.getMinutes();
+                                
+                                // Make midnight grid lines much thicker
+                                if (hours === 0 && minutes === 0) {
+                                    return 4;
+                                }
                             }
                             
-                            const date = new Date(context.tick.value);
-                            // Make midnight grid lines much thicker for clear day separation
-                            return date.getHours() === 0 ? 4 : 1; 
+                            // Check against our saved midnight dates
+                            const scale = context.chart.scales.x;
+                            if (scale._midnightDates && context.tick && 
+                                scale._midnightDates.includes(context.tick.value)) {
+                                return 4;
+                            }
+                            
+                            return 1;
                         }
                     }
                 },
