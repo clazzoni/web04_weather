@@ -316,7 +316,7 @@ function drawSolarSystem() {
     }
 }
 
-// --- Calculate simplified planet positions ---
+// --- Calculate more accurate planet positions ---
 function calculatePlanetPositions(date) {
     // Orbital periods in days
     const orbitalPeriods = [88, 225, 365.25, 687, 4333, 10759, 30687, 60190];
@@ -327,15 +327,25 @@ function calculatePlanetPositions(date) {
     // Calculate days since epoch
     const daysSinceEpoch = (date.getTime() - epoch.getTime()) / (1000 * 60 * 60 * 24);
     
-    // Calculate angles based on orbital periods (simplified)
-    return orbitalPeriods.map(period => {
+    // Initial angles at epoch (in radians) - approximated values
+    const initialAngles = [
+        1.5, // Mercury - ~85 degrees
+        4.9, // Venus - ~280 degrees
+        1.8, // Earth - ~100 degrees
+        0.3, // Mars - ~20 degrees
+        0.6, // Jupiter - ~35 degrees
+        5.9, // Saturn - ~340 degrees
+        3.1, // Uranus - ~180 degrees
+        4.2  // Neptune - ~240 degrees
+    ];
+    
+    // Calculate angles based on orbital periods and initial positions
+    return orbitalPeriods.map((period, index) => {
         // Convert to angle in radians (2π = full orbit)
-        const angle = (daysSinceEpoch % period) / period * 2 * Math.PI;
+        const angularVelocity = 2 * Math.PI / period;
+        const angle = (initialAngles[index] + angularVelocity * daysSinceEpoch) % (2 * Math.PI);
         
-        // Add some phase offset to make it look more realistic
-        // These offsets are not astronomically accurate but make the diagram more interesting
-        const offset = Math.random() * Math.PI; // Random offset between 0 and π
-        return (angle + offset) % (2 * Math.PI);
+        return angle;
     });
 }
 
@@ -981,8 +991,52 @@ function handleTimeSpanChange() {
 
 // --- Initialize the App ---
 function initializeWeatherApp() {
-    // Style the chart container to take up more space
+    // Add Roboto font to the page
+    const fontLink = document.createElement('link');
+    fontLink.rel = 'stylesheet';
+    fontLink.href = 'https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap';
+    document.head.appendChild(fontLink);
+    
+    // Apply Roboto font to the entire page
+    document.body.style.fontFamily = 'Roboto, sans-serif';
+    
+    // Add URL text as a clickable hyperlink at the very top of the page
+    const urlHeader = document.createElement('div');
+    urlHeader.style.textAlign = 'left';
+    urlHeader.style.padding = '10px';
+    urlHeader.style.backgroundColor = '#f8f9fa';
+    urlHeader.style.marginBottom = '15px';
+    urlHeader.style.paddingLeft = '20px';
+    
+    // Create hyperlink element
+    const link = document.createElement('a');
+    link.href = 'https://bit.ly/jcweather';
+    link.textContent = 'https://bit.ly/jcweather';
+    link.style.fontWeight = 'bold';
+    link.style.fontSize = '18px';
+    link.style.color = '#0066cc';
+    link.style.textDecoration = 'none';
+    
+    // Add hover effect
+    link.addEventListener('mouseover', function() {
+        link.style.textDecoration = 'underline';
+    });
+    
+    link.addEventListener('mouseout', function() {
+        link.style.textDecoration = 'none';
+    });
+    
+    urlHeader.appendChild(link);
+    
+    // Insert at the beginning of the body or before the chart container
     const chartContainer = document.querySelector('.chart-container');
+    if (chartContainer && chartContainer.parentNode) {
+        chartContainer.parentNode.insertBefore(urlHeader, chartContainer);
+    } else {
+        document.body.insertBefore(urlHeader, document.body.firstChild);
+    }
+    
+    // Style the chart container to take up more space
     if (chartContainer) {
         chartContainer.style.width = '95%';
         chartContainer.style.margin = '0 auto';
