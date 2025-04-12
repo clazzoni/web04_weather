@@ -230,10 +230,10 @@ function renderSolarSystemDiagram() {
         timeDisplay.style.fontSize = '14px';
         solarSystemContainer.appendChild(timeDisplay);
         
-        // Insert after the sunrise/sunset table
-        const tableContainer = document.getElementById('sunTimesTableContainer');
-        if (tableContainer) {
-            tableContainer.after(solarSystemContainer);
+        // Insert after the controls container (which contains Time Span dropdown and location input)
+        const controlsContainer = document.querySelector('.controls-container');
+        if (controlsContainer) {
+            controlsContainer.after(solarSystemContainer);
         } else {
             // Fallback to inserting after chart container
             const chartContainer = document.querySelector('.chart-container');
@@ -810,11 +810,11 @@ function processWeatherData(apiData, timeSpan = 48) {
         }
     });
     
-    // Render the sunrise/sunset times table with all sun times, regardless of markers
-    renderSunTimesTable(allSunTimes);
-    
-    // Render the solar system diagram
+    // First render the solar system diagram (below controls)
     renderSolarSystemDiagram();
+    
+    // Then render the sunrise/sunset times table (will appear below the diagram)
+    renderSunTimesTable(allSunTimes);
 }
 
 // --- Geocode Location to Coordinates ---
