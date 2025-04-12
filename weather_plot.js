@@ -229,8 +229,8 @@ function processWeatherData(apiData, timeSpan = 48) {
                             }
                             
                             const date = new Date(context.tick.value);
-                            // Make midnight grid lines darker for day separation
-                            return date.getHours() === 0 ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.1)';
+                            // Make midnight grid lines significantly darker for day separation
+                            return date.getHours() === 0 ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.1)';
                         },
                         lineWidth: function(context) {
                             // Add safety check for when context.tick is undefined
@@ -239,8 +239,8 @@ function processWeatherData(apiData, timeSpan = 48) {
                             }
                             
                             const date = new Date(context.tick.value);
-                            // Make midnight grid lines thicker for day separation
-                            return date.getHours() === 0 ? 2 : 1; 
+                            // Make midnight grid lines much thicker for clear day separation
+                            return date.getHours() === 0 ? 4 : 1; 
                         }
                     }
                 },
