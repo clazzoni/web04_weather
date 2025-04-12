@@ -169,8 +169,9 @@ function processWeatherData(apiData, timeSpan = 48) {
                         text: 'Temperature (°C)'
                     },
                     grid: {
-                        drawOnChartArea: false // Only draw grid for the main axis (optional)
-                    }
+                        drawOnChartArea: true // Draw grid lines based on temperature axis
+                    },
+                    beginAtZero: false // Allow negative temperatures
                 },
                 yRain: {
                     type: 'linear',
@@ -180,14 +181,14 @@ function processWeatherData(apiData, timeSpan = 48) {
                         text: 'Precipitation (mm)'
                     },
                     grid: {
-                        drawOnChartArea: false // Avoid cluttering with multiple grids
+                        drawOnChartArea: false // Don't draw grid for rain axis
                     },
                     ticks: {
                         beginAtZero: true // Rain starts at 0
                     },
                     suggestedMax: 5 // Adjust max rain value based on expected amounts
                 },
-                 yCloud: {
+                yCloud: {
                     type: 'linear',
                     position: 'right', // Can also be 'left' if preferred
                     title: {
@@ -195,7 +196,7 @@ function processWeatherData(apiData, timeSpan = 48) {
                         text: 'Cloud Cover (%)'
                     },
                     grid: {
-                        drawOnChartArea: true // Draw primary grid for cloud cover
+                        drawOnChartArea: false // Don't draw grid for cloud axis
                     },
                     min: 0,
                     max: 100, // Cloud cover is 0-100%
