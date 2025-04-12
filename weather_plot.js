@@ -108,6 +108,31 @@ function processWeatherData(apiData, timeSpan = 48) {
     console.log("Processed Rain:", rain);
     console.log("Processed Clouds:", clouds);
 
+    // Extract solar radiation data
+    const radiation = [];
+    timeseries.forEach(entry => {
+        const time = new Date(entry.time);
+        if (time >= now && time <= endTime) {
+            // Get solar radiation (usually in instant.details.global_radiation)
+            if (entry.data?.instant?.details?.global_radiation !== undefined) {
+                radiation.push(entry.data.instant.details.global_radiation);
+            } else {
+                radiation.push(null); // Handle missing data
+            }
+        }
+    });
+    console.log("Processed Solar Radiation:", radiation);
+    
+    // Find maximum solar radiation value to set appropriate scale
+    // If data exists, use actual max or default to 1200 W/m² (typical maximum solar radiation on Earth)
+    const nonNullRadiation = radiation.filter(val => val !== null && val !== 0);
+    const maxRadiation = nonNullRadiation.length > 0 ? Math.max(...nonNullRadiation) : 0;
+    console.log("Max Solar Radiation:", maxRadiation);
+    
+    // Fixed scale for solar radiation - use at least 1200 to ensure visibility
+    const solarScaleMax = Math.max(1200, Math.ceil(maxRadiation * 1.5)); // Use at least 1200, or 150% of max
+    console.log("Solar Scale Max:", solarScaleMax);
+
     // Create horizontal reference lines data arrays
     const tempLine0deg = labels.map(() => 0);  // 0°C reference line
     const tempLine10deg = labels.map(() => 10); // 10°C reference line
@@ -200,6 +225,20 @@ function processWeatherData(apiData, timeSpan = 48) {
                     pointRadius: 1,
                     fill: true, // Optional: fill area under cloud line
                     order: 0 // Draw cloud cover behind others
+                },
+                // Add solar radiation dataset
+                {
+                    label: 'Solar Radiation (W/m²)',
+                    data: radiation,
+                    type: 'line',
+                    borderColor: 'rgba(255, 165, 0, 1)', // Brighter orange for better visibility
+                    backgroundColor: 'rgba(255, 165, 0, 0.4)', // More opaque fill
+                    yAxisID: 'ySolar', // Assign to the solar radiation axis
+                    tension: 0.1,
+                    pointRadius: 2,
+                    borderWidth: 4, // Thicker line for visibility
+                    fill: true, // Fill area under the curve for better visibility
+                    order: 3 // Draw after temperature but before reference lines
                 },
                 // Add horizontal temperature reference lines
                 {
@@ -412,6 +451,34 @@ function processWeatherData(apiData, timeSpan = 48) {
                     min: 0,
                     max: 100, // Cloud cover is 0-100%
                     display: true // Ensure this axis is shown
+                },
+                // Add Y-axis for solar radiation
+                ySolar: {
+                    type: 'linear',
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Solar Radiation (W/m²)',
+                        font: {
+                            weight: 'bold'
+                        }
+                    },
+                    grid: {
+                        drawOnChartArea: false // Don't draw grid for solar radiation axis
+                    },
+                    ticks: {
+                        beginAtZero: true,
+                        font: {
+                            weight: 'bold' // Make ticks more visible
+                        }
+                    },
+                    min: 0,
+                    max: solarScaleMax, // Use our calculated/fixed scale
+                    offset: true, // Add offset for better visibility among multiple axes
+                    afterFit: function(scaleInstance) {
+                        // Make the axis wider to ensure labels are fully visible
+                        scaleInstance.width = 60;
+                    }
                 }
             },
             plugins: {
