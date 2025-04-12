@@ -139,7 +139,10 @@ function renderSunTimesTable(sunTimes) {
         
         // Format date: YYYY-MM-DD
         const dateCell = document.createElement('td');
-        dateCell.textContent = times.date.toLocaleDateString();
+        const year = times.date.getFullYear();
+        const month = String(times.date.getMonth() + 1).padStart(2, '0');
+        const day = String(times.date.getDate()).padStart(2, '0');
+        dateCell.textContent = `${year}-${month}-${day}`;
         dateCell.style.padding = '8px';
         dateCell.style.border = '1px solid #ddd';
         dateCell.style.textAlign = 'center';
