@@ -65,6 +65,7 @@ function processWeatherData(apiData, timeSpan = 48) {
     const temps = [];  // Y-axis data (temperature)
     const rain = [];   // Y-axis data (precipitation)
     const clouds = []; // Y-axis data (cloud cover)
+    const wind = [];   // Y-axis data (wind speed)
 
     timeseries.forEach(entry => {
         const time = new Date(entry.time);
@@ -100,6 +101,13 @@ function processWeatherData(apiData, timeSpan = 48) {
             } else {
                 clouds.push(null); // Handle missing data
             }
+            
+            // Get wind speed (usually in instant.details)
+            if (entry.data?.instant?.details?.wind_speed !== undefined) {
+                wind.push(entry.data.instant.details.wind_speed);
+            } else {
+                wind.push(null); // Handle missing data
+            }
         }
     });
 
@@ -107,6 +115,7 @@ function processWeatherData(apiData, timeSpan = 48) {
     console.log("Processed Temps:", temps);
     console.log("Processed Rain:", rain);
     console.log("Processed Clouds:", clouds);
+    console.log("Processed Wind:", wind);
 
     // Create horizontal reference lines data arrays
     const tempLine0deg = labels.map(() => 0);  // 0°C reference line
@@ -200,6 +209,20 @@ function processWeatherData(apiData, timeSpan = 48) {
                     pointRadius: 1,
                     fill: true, // Optional: fill area under cloud line
                     order: 0 // Draw cloud cover behind others
+                },
+                // Add wind speed dataset
+                {
+                    label: 'Wind Speed (m/s)',
+                    data: wind,
+                    type: 'line',
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    yAxisID: 'yWind', // Assign to the wind axis
+                    tension: 0.1,
+                    pointRadius: 1,
+                    borderWidth: 2,
+                    borderDash: [],
+                    order: 3 // Draw after temperature but before reference lines
                 },
                 // Reference Lines
                 {
@@ -412,6 +435,22 @@ function processWeatherData(apiData, timeSpan = 48) {
                     min: 0,
                     max: 100, // Cloud cover is 0-100%
                     display: true // Ensure this axis is shown
+                },
+                // Add Y-axis for wind speed
+                yWind: {
+                    type: 'linear',
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Wind Speed (m/s)'
+                    },
+                    grid: {
+                        drawOnChartArea: false // Don't draw grid for wind axis
+                    },
+                    ticks: {
+                        beginAtZero: true // Wind starts at 0
+                    },
+                    suggestedMax: 15 // Adjust max wind value based on expected amounts
                 }
             },
             plugins: {
