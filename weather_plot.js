@@ -203,7 +203,7 @@ function renderSolarSystemDiagram() {
         solarSystemContainer.style.width = '95%';
         solarSystemContainer.style.margin = '40px auto';
         solarSystemContainer.style.maxWidth = '1000px';
-        solarSystemContainer.style.height = '500px';
+        solarSystemContainer.style.height = '700px'; // Increased from 500px to 700px for more vertical space
         
         // Create heading
         const heading = document.createElement('h3');
@@ -215,7 +215,7 @@ function renderSolarSystemDiagram() {
         const canvas = document.createElement('canvas');
         canvas.id = 'solarSystemCanvas';
         canvas.width = 1000;
-        canvas.height = 500;
+        canvas.height = 700; // Increased from 500px to 700px to match container
         canvas.style.width = '100%';
         canvas.style.height = '100%';
         canvas.style.display = 'block';
@@ -274,7 +274,7 @@ function drawSolarSystem() {
     const orbits = [0.39, 0.72, 1, 1.52, 5.2, 9.58, 19.18, 30.07];
     const orbitLabels = ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'];
     const orbitColors = ['gray', 'orange', 'blue', 'red', 'brown', 'goldenrod', 'lightblue', 'blue'];
-    const scaleFactor = 50; // Adjust this to change the scale of the diagram
+    const scaleFactor = 35; // Reduced from 50 to 35 to fit all planets in the visible area
     
     // Draw orbits
     for (let i = 0; i < orbits.length; i++) {
