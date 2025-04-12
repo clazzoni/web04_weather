@@ -114,6 +114,14 @@ function processWeatherData(apiData, timeSpan = 48) {
         weatherChart.destroy(); // Destroy previous chart instance if exists
     }
 
+    // Ensure the chart container is wide enough
+    const chartContainer = document.querySelector('.chart-container');
+    if (chartContainer) {
+        chartContainer.style.width = '95%'; // Make the chart container use 95% of available width
+        chartContainer.style.margin = '0 auto'; // Center the chart container
+        chartContainer.style.maxWidth = '1800px'; // Set a reasonable maximum width
+    }
+
     weatherChart = new Chart(ctx, {
         type: 'bar', // Use bar type to accommodate rain bars
         data: {
@@ -194,6 +202,7 @@ function processWeatherData(apiData, timeSpan = 48) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            aspectRatio: 2.5, // Wider aspect ratio (default is 2)
             scales: {
                 x: {
                     type: 'time', // Use time scale
@@ -525,6 +534,14 @@ function handleTimeSpanChange() {
 
 // --- Initialize the App ---
 function initializeWeatherApp() {
+    // Style the chart container to take up more space
+    const chartContainer = document.querySelector('.chart-container');
+    if (chartContainer) {
+        chartContainer.style.width = '95%';
+        chartContainer.style.margin = '0 auto';
+        chartContainer.style.maxWidth = '1800px';
+    }
+    
     createLocationForm();
     createTimeSpanDropdown();
     getWeatherData(48); // Default to 48 hours
