@@ -123,12 +123,51 @@ function processWeatherData(apiData, timeSpan = 48) {
                     label: 'Temperature (°C)',
                     data: temps,
                     type: 'line', // Override type for this dataset
-                    borderColor: 'rgb(255, 99, 132)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    // Remove fixed borderColor to use dynamic colors
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
                     yAxisID: 'yTemp', // Assign to the temperature axis
                     tension: 0.1, // Makes the line slightly curved
-                    pointRadius: 1,
-                    order: 1 // Ensure line is drawn first
+                    pointRadius: 2,
+                    borderWidth: 6, // Double thickness temperature line
+                    order: 1, // Ensure line is drawn first
+                    // Add a segment option to color line segments by temperature
+                    segment: {
+                        borderColor: function(context) {
+                            const value = context.p1.parsed.y;
+                            if (value === null || value === undefined) {
+                                return 'rgba(0, 0, 0, 0.1)';
+                            }
+                            
+                            // Convert temperature to color
+                            // Blue for cold (-10C and below)
+                            // Red for hot (25C and above)
+                            // Rainbow scale between
+                            
+                            // Normalize temperature to a value between 0 and 1
+                            const minTemp = -10;  // Coldest (blue)
+                            const maxTemp = 25;   // Hottest (red)
+                            let normalizedTemp = (value - minTemp) / (maxTemp - minTemp);
+                            normalizedTemp = Math.min(Math.max(normalizedTemp, 0), 1); // Clamp between 0 and 1
+                            
+                            // Rainbow color scale function
+                            function getTemperatureColor(t) {
+                                // RGB values for rainbow spectrum
+                                if (t <= 0.2) { // Blue to cyan (0.0 - 0.2)
+                                    return `rgb(0, ${Math.round(255 * t * 5)}, 255)`;
+                                } else if (t <= 0.4) { // Cyan to green (0.2 - 0.4)
+                                    return `rgb(0, 255, ${Math.round(255 * (1 - (t - 0.2) * 5))})`;
+                                } else if (t <= 0.6) { // Green to yellow (0.4 - 0.6)
+                                    return `rgb(${Math.round(255 * (t - 0.4) * 5)}, 255, 0)`;
+                                } else if (t <= 0.8) { // Yellow to orange (0.6 - 0.8)
+                                    return `rgb(255, ${Math.round(255 * (1 - (t - 0.6) * 5))}, 0)`;
+                                } else { // Orange to red (0.8 - 1.0)
+                                    return `rgb(255, 0, 0)`;
+                                }
+                            }
+                            
+                            return getTemperatureColor(normalizedTemp);
+                        }
+                    }
                 },
                 {
                     label: 'Precipitation (mm/hr)',
