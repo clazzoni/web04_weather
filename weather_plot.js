@@ -101,6 +101,7 @@ function renderSunTimesTable(sunTimes) {
     const heading = document.createElement('h3');
     heading.textContent = 'Sunrise and Sunset Times';
     heading.style.textAlign = 'center';
+    heading.style.fontFamily = "'Roboto', sans-serif";
     tableContainer.appendChild(heading);
     
     // Create table
@@ -108,6 +109,7 @@ function renderSunTimesTable(sunTimes) {
     table.style.width = '100%';
     table.style.borderCollapse = 'collapse';
     table.style.marginTop = '10px';
+    table.style.fontFamily = "'Roboto', sans-serif";
     
     // Create table header
     const thead = document.createElement('thead');
@@ -209,6 +211,7 @@ function renderSolarSystemDiagram() {
         const heading = document.createElement('h3');
         heading.textContent = 'Current Planetary Positions';
         heading.style.textAlign = 'center';
+        heading.style.fontFamily = "'Roboto', sans-serif";
         solarSystemContainer.appendChild(heading);
         
         // Create canvas for the diagram
@@ -228,6 +231,7 @@ function renderSolarSystemDiagram() {
         timeDisplay.style.textAlign = 'center';
         timeDisplay.style.marginTop = '10px';
         timeDisplay.style.fontSize = '14px';
+        timeDisplay.style.fontFamily = "'Roboto', sans-serif";
         solarSystemContainer.appendChild(timeDisplay);
         
         // Insert after the controls container (which contains Time Span dropdown and location input)
@@ -305,7 +309,7 @@ function drawSolarSystem() {
         ctx.fill();
         
         // Add label
-        ctx.font = '12px Arial';
+        ctx.font = "12px 'Roboto', sans-serif";
         ctx.fillStyle = 'black';
         
         // Position labels to avoid overlap with orbits
@@ -358,8 +362,8 @@ Chart.register({
         const xScale = chart.scales.x;
         const ctx = chart.ctx;
         ctx.save();
-        // Use an emoji-supporting font with larger size to ensure visibility
-        ctx.font = "24px Segoe UI Emoji";
+        // Use Roboto font with emoji support
+        ctx.font = "24px 'Roboto', 'Segoe UI Emoji', sans-serif";
         ctx.textAlign = "center";
         // Draw markers 10 pixels above the bottom of the x-axis
         sunTimes.forEach(function(times) {
@@ -619,6 +623,9 @@ function processWeatherData(apiData, timeSpan = 48) {
             responsive: true,
             maintainAspectRatio: false,
             aspectRatio: 2.5, // Wider aspect ratio (default is 2)
+            font: {
+                family: "'Roboto', sans-serif" // Set default font family for all text
+            },
             scales: {
                 x: {
                     type: 'time', // Use time scale
@@ -643,9 +650,13 @@ function processWeatherData(apiData, timeSpan = 48) {
                         autoSkip: true, // Allow skipping some ticks for better readability
                         autoSkipPadding: 20, // Add padding between ticks that are shown
                         includeBounds: true,
+                        font: {
+                            family: "'Roboto', sans-serif" // Set font for x-axis ticks
+                        },
                         major: {
                             enabled: true, // Enable major ticks for midnight
                             font: {
+                                family: "'Roboto', sans-serif",
                                 weight: 'bold', // Make day names bold
                                 size: 56 // Double the size from 28 to 56
                             }
@@ -746,25 +757,39 @@ function processWeatherData(apiData, timeSpan = 48) {
                     position: 'left',
                     title: {
                         display: true,
-                        text: 'Temperature (°C)'
+                        text: 'Temperature (°C)',
+                        font: {
+                            family: "'Roboto', sans-serif" // Set font for axis title
+                        }
                     },
                     grid: {
                         drawOnChartArea: true // Draw grid lines based on temperature axis
                     },
-                    beginAtZero: false // Allow negative temperatures
+                    beginAtZero: false, // Allow negative temperatures
+                    ticks: {
+                        font: {
+                            family: "'Roboto', sans-serif" // Set font for temperature axis
+                        }
+                    }
                 },
                 yRain: {
                     type: 'linear',
                     position: 'right', // Place rain axis on the right
                     title: {
                         display: true,
-                        text: 'Precipitation (mm)'
+                        text: 'Precipitation (mm)',
+                        font: {
+                            family: "'Roboto', sans-serif" // Set font for axis title
+                        }
                     },
                     grid: {
                         drawOnChartArea: false // Don't draw grid for rain axis
                     },
                     ticks: {
-                        beginAtZero: true // Rain starts at 0
+                        beginAtZero: true, // Rain starts at 0
+                        font: {
+                            family: "'Roboto', sans-serif" // Set font for rain axis
+                        }
                     },
                     suggestedMax: 5 // Adjust max rain value based on expected amounts
                 },
@@ -773,14 +798,22 @@ function processWeatherData(apiData, timeSpan = 48) {
                     position: 'right', // Can also be 'left' if preferred
                     title: {
                         display: true,
-                        text: 'Cloud Cover (%)'
+                        text: 'Cloud Cover (%)',
+                        font: {
+                            family: "'Roboto', sans-serif" // Set font for axis title
+                        }
                     },
                     grid: {
                         drawOnChartArea: false // Don't draw grid for cloud axis
                     },
                     min: 0,
                     max: 100, // Cloud cover is 0-100%
-                    display: true // Ensure this axis is shown
+                    display: true, // Ensure this axis is shown
+                    ticks: {
+                        font: {
+                            family: "'Roboto', sans-serif" // Set font for cloud axis
+                        }
+                    }
                 },
                 // Add Y-axis for wind speed
                 yWind: {
@@ -788,13 +821,19 @@ function processWeatherData(apiData, timeSpan = 48) {
                     position: 'right',
                     title: {
                         display: true,
-                        text: 'Wind Speed (m/s)'
+                        text: 'Wind Speed (m/s)',
+                        font: {
+                            family: "'Roboto', sans-serif" // Set font for axis title
+                        }
                     },
                     grid: {
                         drawOnChartArea: false // Don't draw grid for wind axis
                     },
                     ticks: {
-                        beginAtZero: true // Wind starts at 0
+                        beginAtZero: true, // Wind starts at 0
+                        font: {
+                            family: "'Roboto', sans-serif" // Set font for wind axis
+                        }
                     },
                     suggestedMax: 15 // Adjust max wind value based on expected amounts
                 }
@@ -803,9 +842,23 @@ function processWeatherData(apiData, timeSpan = 48) {
                 tooltip: {
                     mode: 'index', // Show tooltips for all datasets at the same time index
                     intersect: false,
+                    titleFont: {
+                        family: "'Roboto', sans-serif"
+                    },
+                    bodyFont: {
+                        family: "'Roboto', sans-serif"
+                    },
+                    footerFont: {
+                        family: "'Roboto', sans-serif"
+                    }
                 },
                 legend: {
                     position: 'top',
+                    labels: {
+                        font: {
+                            family: "'Roboto', sans-serif" // Set font for legend labels
+                        }
+                    }
                 },
                 title: {
                     display: false, // Ensure no chart title is displayed
