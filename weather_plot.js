@@ -108,6 +108,10 @@ function processWeatherData(apiData, timeSpan = 48) {
     console.log("Processed Rain:", rain);
     console.log("Processed Clouds:", clouds);
 
+    // Create horizontal reference lines data arrays
+    const tempLine0deg = labels.map(() => 0);  // 0°C reference line
+    const tempLine10deg = labels.map(() => 10); // 10°C reference line
+    const tempLine20deg = labels.map(() => 20); // 20°C reference line
 
     // --- Create the Chart using Chart.js ---
     if (weatherChart) {
@@ -196,6 +200,49 @@ function processWeatherData(apiData, timeSpan = 48) {
                     pointRadius: 1,
                     fill: true, // Optional: fill area under cloud line
                     order: 0 // Draw cloud cover behind others
+                },
+                // Add horizontal temperature reference lines
+                {
+                    label: '0°C',
+                    data: tempLine0deg,
+                    type: 'line',
+                    borderColor: 'rgba(0, 0, 255, 0.5)', // Blue
+                    borderWidth: 1,
+                    borderDash: [5, 5], // Dashed line
+                    pointRadius: 0, // No points on the line
+                    yAxisID: 'yTemp', // Use temperature axis
+                    fill: false,
+                    order: 4, // Draw behind other datasets
+                    tension: 0,
+                    borderJoinStyle: 'round'
+                },
+                {
+                    label: '10°C',
+                    data: tempLine10deg,
+                    type: 'line',
+                    borderColor: 'rgba(0, 175, 0, 0.5)', // Green
+                    borderWidth: 1,
+                    borderDash: [5, 5], // Dashed line
+                    pointRadius: 0, // No points on the line
+                    yAxisID: 'yTemp', // Use temperature axis
+                    fill: false,
+                    order: 4, // Draw behind other datasets
+                    tension: 0,
+                    borderJoinStyle: 'round'
+                },
+                {
+                    label: '20°C',
+                    data: tempLine20deg,
+                    type: 'line',
+                    borderColor: 'rgba(255, 165, 0, 0.5)', // Orange
+                    borderWidth: 1,
+                    borderDash: [5, 5], // Dashed line
+                    pointRadius: 0, // No points on the line
+                    yAxisID: 'yTemp', // Use temperature axis
+                    fill: false,
+                    order: 4, // Draw behind other datasets
+                    tension: 0,
+                    borderJoinStyle: 'round'
                 }
             ]
         },
