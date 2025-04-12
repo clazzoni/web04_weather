@@ -362,13 +362,45 @@ Chart.register({
         const xScale = chart.scales.x;
         const ctx = chart.ctx;
         ctx.save();
-        // Use Roboto font with emoji support
-        ctx.font = "24px 'Roboto', 'Segoe UI Emoji', sans-serif";
-        ctx.textAlign = "center";
-        // Draw markers 10 pixels above the bottom of the x-axis
+        
+        // Draw markers and time labels above them
         sunTimes.forEach(function(times) {
             let sunrisePx = xScale.getPixelForValue(times.sunrise);
             let sunsetPx = xScale.getPixelForValue(times.sunset);
+            
+            // Format sunrise/sunset times as HH:MM
+            const sunriseTime = times.sunrise.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false});
+            const sunsetTime = times.sunset.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false});
+            
+            // Draw time labels above the icons
+            ctx.font = "12px 'Roboto', sans-serif";
+            ctx.textAlign = "center";
+            
+            // Position above the sun icon (25 pixels above the bottom of the x-axis)
+            const labelY = xScale.bottom - 40;
+            
+            // Add white background for better visibility
+            const sunriseWidth = ctx.measureText(sunriseTime).width;
+            ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+            ctx.fillRect(sunrisePx - sunriseWidth/2 - 2, labelY - 10, sunriseWidth + 4, 14);
+            
+            // Draw sunrise time
+            ctx.fillStyle = "#FF6600"; // Orange color for sunrise
+            ctx.fillText(sunriseTime, sunrisePx, labelY);
+            
+            // Add background for sunset time
+            const sunsetWidth = ctx.measureText(sunsetTime).width;
+            ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+            ctx.fillRect(sunsetPx - sunsetWidth/2 - 2, labelY - 10, sunsetWidth + 4, 14);
+            
+            // Draw sunset time
+            ctx.fillStyle = "#444444"; // Dark gray for sunset
+            ctx.fillText(sunsetTime, sunsetPx, labelY);
+            
+            // Use Roboto font with emoji support for the sun/moon icons
+            ctx.font = "24px 'Roboto', 'Segoe UI Emoji', sans-serif";
+            
+            // Draw the sun and moon icons
             ctx.fillStyle = "orange";
             ctx.fillText("☀", sunrisePx, xScale.bottom - 10);
             ctx.fillStyle = "gray";
