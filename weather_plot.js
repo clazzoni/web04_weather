@@ -162,11 +162,47 @@ function processWeatherData(apiData, timeSpan = 48) {
                         unit: 'hour', // Display unit
                         tooltipFormat: 'YYYY-MM-DD HH:mm', // Format for tooltips
                         displayFormats: {
-                            hour: 'HH:mm' // Format for axis labels
+                            hour: 'HH:mm', // Format for hour labels
+                            day: 'ddd' // Add day name format (Mon, Tue, Wed, etc.)
                         }
                     },
                     title: {
                         display: false, // Changed to false to remove the title
+                    },
+                    ticks: {
+                        callback: function(value, index, ticks) {
+                            const date = new Date(value);
+                            const hours = date.getHours();
+                            
+                            // If midnight (start of day), show the day name
+                            if (hours === 0) {
+                                return date.toLocaleDateString('en-US', {weekday: 'short'});
+                            } 
+                            // For other hours, just show the time
+                            return date.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: false});
+                        }
+                    },
+                    grid: {
+                        color: function(context) {
+                            // Add safety check for when context.tick is undefined
+                            if (!context.tick || context.tick.value === undefined) {
+                                return 'rgba(0, 0, 0, 0.1)';
+                            }
+                            
+                            const date = new Date(context.tick.value);
+                            // Make midnight grid lines darker for day separation
+                            return date.getHours() === 0 ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.1)';
+                        },
+                        lineWidth: function(context) {
+                            // Add safety check for when context.tick is undefined
+                            if (!context.tick || context.tick.value === undefined) {
+                                return 1;
+                            }
+                            
+                            const date = new Date(context.tick.value);
+                            // Make midnight grid lines thicker for day separation
+                            return date.getHours() === 0 ? 2 : 1; 
+                        }
                     }
                 },
                 // Define multiple Y axes
