@@ -165,8 +165,7 @@ function processWeatherData(apiData, timeSpan = 48) {
                         }
                     },
                     title: {
-                        display: true,
-                        text: 'Time'
+                        display: false, // Changed to false to remove the title
                     }
                 },
                 // Define multiple Y axes
@@ -219,6 +218,9 @@ function processWeatherData(apiData, timeSpan = 48) {
                 },
                 legend: {
                     position: 'top',
+                },
+                title: {
+                    display: false, // Ensure no chart title is displayed
                 }
             },
             interaction: { // Enhance interaction
