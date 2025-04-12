@@ -108,34 +108,6 @@ function processWeatherData(apiData, timeSpan = 48) {
     console.log("Processed Rain:", rain);
     console.log("Processed Clouds:", clouds);
 
-    // Extract solar radiation data
-    const radiation = [];
-    timeseries.forEach(entry => {
-        const time = new Date(entry.time);
-        if (time >= now && time <= endTime) {
-            // Get solar radiation (usually in instant.details.global_radiation)
-            if (entry.data?.instant?.details?.global_radiation !== undefined) {
-                radiation.push(entry.data.instant.details.global_radiation);
-            } else {
-                radiation.push(null); // Handle missing data
-            }
-        }
-    });
-    console.log("Processed Solar Radiation:", radiation);
-    
-    // Find maximum solar radiation value to set appropriate scale
-    // If data exists, use actual max or default to 1200 W/m² (typical maximum solar radiation on Earth)
-    const nonNullRadiation = radiation.filter(val => val !== null && val !== 0);
-    const maxRadiation = nonNullRadiation.length > 0 ? Math.max(...nonNullRadiation) : 0;
-    console.log("Max Solar Radiation:", maxRadiation);
-    
-    // Fixed scale for solar radiation - use at least 1200 to ensure visibility
-    const solarScaleMax = Math.max(1200, Math.ceil(maxRadiation * 1.5)); // Use at least 1200, or 150% of max
-    console.log("Solar Scale Max:", solarScaleMax);
-    
-    // Update the solar radiation values display
-    updateSolarRadiationDisplay(labels, radiation);
-
     // Create horizontal reference lines data arrays
     const tempLine0deg = labels.map(() => 0);  // 0°C reference line
     const tempLine10deg = labels.map(() => 10); // 10°C reference line
@@ -229,21 +201,7 @@ function processWeatherData(apiData, timeSpan = 48) {
                     fill: true, // Optional: fill area under cloud line
                     order: 0 // Draw cloud cover behind others
                 },
-                // Add solar radiation dataset
-                {
-                    label: 'Solar Radiation (W/m²)',
-                    data: radiation,
-                    type: 'line',
-                    borderColor: 'rgba(255, 165, 0, 1)', // Brighter orange for better visibility
-                    backgroundColor: 'rgba(255, 165, 0, 0.4)', // More opaque fill
-                    yAxisID: 'ySolar', // Assign to the solar radiation axis
-                    tension: 0.1,
-                    pointRadius: 2,
-                    borderWidth: 4, // Thicker line for visibility
-                    fill: true, // Fill area under the curve for better visibility
-                    order: 3 // Draw after temperature but before reference lines
-                },
-                // Add horizontal temperature reference lines
+                // Reference Lines
                 {
                     label: '0°C',
                     data: tempLine0deg,
@@ -454,34 +412,6 @@ function processWeatherData(apiData, timeSpan = 48) {
                     min: 0,
                     max: 100, // Cloud cover is 0-100%
                     display: true // Ensure this axis is shown
-                },
-                // Add Y-axis for solar radiation
-                ySolar: {
-                    type: 'linear',
-                    position: 'right',
-                    title: {
-                        display: true,
-                        text: 'Solar Radiation (W/m²)',
-                        font: {
-                            weight: 'bold'
-                        }
-                    },
-                    grid: {
-                        drawOnChartArea: false // Don't draw grid for solar radiation axis
-                    },
-                    ticks: {
-                        beginAtZero: true,
-                        font: {
-                            weight: 'bold' // Make ticks more visible
-                        }
-                    },
-                    min: 0,
-                    max: solarScaleMax, // Use our calculated/fixed scale
-                    offset: true, // Add offset for better visibility among multiple axes
-                    afterFit: function(scaleInstance) {
-                        // Make the axis wider to ensure labels are fully visible
-                        scaleInstance.width = 60;
-                    }
                 }
             },
             plugins: {
@@ -656,132 +586,8 @@ function createLocationForm(parentContainer) {
     formContainer.appendChild(locationDisplay);
     formContainer.appendChild(form);
     
-    // Create container for solar radiation values
-    const solarValueContainer = document.createElement('div');
-    solarValueContainer.id = 'solarRadiationDisplay';
-    solarValueContainer.className = 'solar-radiation-display';
-    solarValueContainer.style.marginTop = '15px';
-    solarValueContainer.style.padding = '10px';
-    solarValueContainer.style.border = '1px solid #ccc';
-    solarValueContainer.style.borderRadius = '5px';
-    solarValueContainer.style.backgroundColor = 'rgba(255, 255, 240, 0.7)';
-    solarValueContainer.style.display = 'none'; // Initially hidden until data is loaded
-    
-    // Add to form container
-    formContainer.appendChild(solarValueContainer);
-    
     // Add to parent container instead of after the timespan
     parentContainer.appendChild(formContainer);
-}
-
-// --- Update Solar Radiation Display ---
-function updateSolarRadiationDisplay(labels, radiationData) {
-    const container = document.getElementById('solarRadiationDisplay');
-    if (!container) return;
-    
-    // Only process if we have valid data
-    if (!radiationData || radiationData.length === 0) {
-        container.style.display = 'none';
-        return;
-    }
-    
-    // Show the container
-    container.style.display = 'block';
-    
-    // Clear existing content
-    container.innerHTML = '';
-    
-    // Create header
-    const header = document.createElement('h3');
-    header.textContent = 'Solar Radiation Values';
-    header.style.margin = '0 0 10px 0';
-    header.style.fontSize = '16px';
-    header.style.color = '#333';
-    container.appendChild(header);
-    
-    // Create table for values
-    const table = document.createElement('table');
-    table.style.width = '100%';
-    table.style.borderCollapse = 'collapse';
-    
-    // Create table header
-    const thead = document.createElement('thead');
-    const headerRow = document.createElement('tr');
-    
-    const timeHeader = document.createElement('th');
-    timeHeader.textContent = 'Time';
-    timeHeader.style.padding = '5px';
-    timeHeader.style.borderBottom = '1px solid #ddd';
-    timeHeader.style.textAlign = 'left';
-    
-    const valueHeader = document.createElement('th');
-    valueHeader.textContent = 'Value (W/m²)';
-    valueHeader.style.padding = '5px';
-    valueHeader.style.borderBottom = '1px solid #ddd';
-    valueHeader.style.textAlign = 'right';
-    
-    headerRow.appendChild(timeHeader);
-    headerRow.appendChild(valueHeader);
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
-    
-    // Create table body
-    const tbody = document.createElement('tbody');
-    
-    // Get next 24 hours of data (or less if not available)
-    const maxEntries = Math.min(24, labels.length);
-    
-    for (let i = 0; i < maxEntries; i++) {
-        // Only add rows for hours with non-null radiation values
-        if (radiationData[i] !== null) {
-            const row = document.createElement('tr');
-            
-            // Format time
-            const timeCell = document.createElement('td');
-            const timeStr = labels[i].toLocaleTimeString('en-US', {
-                hour: '2-digit', 
-                minute: '2-digit',
-                hour12: false
-            });
-            timeCell.textContent = timeStr;
-            timeCell.style.padding = '5px';
-            timeCell.style.borderBottom = '1px solid #eee';
-            
-            // Format value
-            const valueCell = document.createElement('td');
-            valueCell.textContent = radiationData[i].toFixed(1);
-            valueCell.style.padding = '5px';
-            valueCell.style.textAlign = 'right';
-            valueCell.style.borderBottom = '1px solid #eee';
-            valueCell.style.fontWeight = 'bold';
-            
-            // Highlight high values
-            if (radiationData[i] > 500) {
-                valueCell.style.color = 'orange';
-            }
-            if (radiationData[i] > 800) {
-                valueCell.style.color = 'red';
-            }
-            
-            row.appendChild(timeCell);
-            row.appendChild(valueCell);
-            tbody.appendChild(row);
-        }
-    }
-    
-    table.appendChild(tbody);
-    container.appendChild(table);
-    
-    // Add current and max value summary
-    const currentValue = radiationData[0] !== null ? radiationData[0].toFixed(1) : 'N/A';
-    const maxValue = Math.max(...radiationData.filter(val => val !== null));
-    
-    const summary = document.createElement('div');
-    summary.style.marginTop = '10px';
-    summary.style.fontWeight = 'bold';
-    summary.innerHTML = `Current: <span style="color: ${currentValue > 500 ? (currentValue > 800 ? 'red' : 'orange') : 'black'}">${currentValue} W/m²</span> | Maximum: <span style="color: ${maxValue > 500 ? (maxValue > 800 ? 'red' : 'orange') : 'black'}">${maxValue.toFixed(1)} W/m²</span>`;
-    
-    container.appendChild(summary);
 }
 
 // --- Handle Dropdown Change ---
@@ -810,69 +616,3 @@ function initializeWeatherApp() {
 
 // --- Initial Load ---
 initializeWeatherApp();
-
-// Fetch solar radiation data from OpenWeatherMap API
-async function fetchSolarRadiationFromOpenWeatherMap(timeLabels, radiationArray) {
-    // You'll need to sign up for a free API key at https://openweathermap.org/api
-    const OPENWEATHER_API_KEY = "6a5bad8c87289fbd55d86da2cf30b7ed"; // Replace with your actual API key
-    
-    try {
-        const url = `https://api.openweathermap.org/data/3.0/onecall?lat=${currentLocation.latitude}&lon=${currentLocation.longitude}&exclude=minutely,alerts&appid=${OPENWEATHER_API_KEY}`;
-        
-        console.log("Fetching solar radiation data from OpenWeatherMap:", url);
-        
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`OpenWeatherMap API error: ${response.status} ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        console.log("OpenWeatherMap data received:", data);
-        
-        // Process hourly forecast data
-        if (data.hourly) {
-            // Match time labels with OpenWeatherMap data points
-            timeLabels.forEach((timeLabel, index) => {
-                // Find the closest time match in OpenWeatherMap data
-                const timestamp = timeLabel.getTime() / 1000; // Convert to Unix timestamp (seconds)
-                let closestDataPoint = null;
-                let minTimeDiff = Infinity;
-                
-                data.hourly.forEach(hourData => {
-                    const timeDiff = Math.abs(hourData.dt - timestamp);
-                    if (timeDiff < minTimeDiff) {
-                        minTimeDiff = timeDiff;
-                        closestDataPoint = hourData;
-                    }
-                });
-                
-                // If we found a matching data point and it's within 2 hours
-                if (closestDataPoint && minTimeDiff <= 7200) {
-                    // OpenWeatherMap provides radiation as 'uvi' (UV Index) which we can use as an approximation
-                    // or directly as radiation if available
-                    if (closestDataPoint.radiation !== undefined) {
-                        radiationArray[index] = closestDataPoint.radiation;
-                    } else if (closestDataPoint.uvi !== undefined) {
-                        // Convert UV index to approximate solar radiation
-                        // Rough approximation: 1 UV index ≈ 25 W/m²
-                        radiationArray[index] = closestDataPoint.uvi * 25;
-                    }
-                }
-            });
-            
-            console.log("Solar Radiation data from OpenWeatherMap:", radiationArray);
-            return true;
-        }
-        
-        return false;
-    } catch (error) {
-        console.error("Error fetching solar radiation data from OpenWeatherMap:", error);
-        return false;
-    }
-}
