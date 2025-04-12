@@ -1,9 +1,14 @@
-// Coordinates for Älta, Sweden (approximate)
-const latitude = 59.26;
-const longitude = 18.18;
+// Default coordinates for Älta, Sweden
+let currentLocation = {
+    name: "Älta, Sweden",
+    latitude: 59.26,
+    longitude: 18.18
+};
 
 // API endpoint for MET Norway Locationforecast 2.0 (Compact format)
-const apiUrl = `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${latitude}&lon=${longitude}`;
+function getApiUrl() {
+    return `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${currentLocation.latitude}&lon=${currentLocation.longitude}`;
+}
 
 // Get the canvas element from HTML
 const ctx = document.getElementById('weatherChart').getContext('2d');
@@ -11,6 +16,7 @@ let weatherChart; // Variable to hold the chart instance
 
 // --- Fetch Weather Data ---
 async function getWeatherData(timeSpan = 48) {
+    const apiUrl = getApiUrl();
     console.log(`Fetching weather data from: ${apiUrl} for ${timeSpan} hours`);
     try {
         // IMPORTANT: MET Norway API requires a unique User-Agent header.
@@ -29,6 +35,9 @@ async function getWeatherData(timeSpan = 48) {
         const data = await response.json();
         console.log("API Data Received:", data);
         processWeatherData(data, timeSpan);
+        
+        // Update location display
+        document.getElementById('currentLocationDisplay').textContent = currentLocation.name;
 
     } catch (error) {
         console.error("Error fetching weather data:", error);
@@ -220,6 +229,97 @@ function processWeatherData(apiData, timeSpan = 48) {
     });
 }
 
+// --- Geocode Location to Coordinates ---
+async function geocodeLocation(locationName) {
+    try {
+        // Using OpenStreetMap's Nominatim service for geocoding
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}`);
+        
+        if (!response.ok) {
+            throw new Error(`Geocoding error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.length === 0) {
+            throw new Error('Location not found. Please try a more specific name.');
+        }
+        
+        // Use the first (most relevant) result
+        const result = data[0];
+        return {
+            name: result.display_name,
+            latitude: parseFloat(result.lat),
+            longitude: parseFloat(result.lon)
+        };
+    } catch (error) {
+        console.error("Geocoding error:", error);
+        alert(`Error finding location: ${error.message}`);
+        return null;
+    }
+}
+
+// --- Create Location Input Form ---
+function createLocationForm() {
+    const formContainer = document.createElement('div');
+    formContainer.className = 'location-form';
+    formContainer.style.marginBottom = '15px';
+    formContainer.style.textAlign = 'center';
+    
+    // Current location display
+    const locationDisplay = document.createElement('div');
+    locationDisplay.id = 'currentLocationDisplay';
+    locationDisplay.textContent = currentLocation.name;
+    locationDisplay.style.fontWeight = 'bold';
+    locationDisplay.style.marginBottom = '10px';
+    
+    // Create form
+    const form = document.createElement('form');
+    form.id = 'locationForm';
+    form.style.display = 'flex';
+    form.style.justifyContent = 'center';
+    form.style.gap = '10px';
+    
+    // Location input
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'locationInput';
+    input.placeholder = 'Enter city, country';
+    input.required = true;
+    
+    // Submit button
+    const button = document.createElement('button');
+    button.type = 'submit';
+    button.textContent = 'Update Location';
+    
+    // Assemble form
+    form.appendChild(input);
+    form.appendChild(button);
+    
+    // Add event listener
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const locationName = document.getElementById('locationInput').value.trim();
+        
+        if (locationName) {
+            const newLocation = await geocodeLocation(locationName);
+            if (newLocation) {
+                currentLocation = newLocation;
+                const timeSpan = parseInt(document.getElementById('timeSpanSelect').value);
+                getWeatherData(timeSpan);
+            }
+        }
+    });
+    
+    // Assemble container
+    formContainer.appendChild(locationDisplay);
+    formContainer.appendChild(form);
+    
+    // Add before the chart container
+    const chartContainer = document.querySelector('.chart-container');
+    chartContainer.before(formContainer);
+}
+
 // --- Create Time Span Dropdown ---
 function createTimeSpanDropdown() {
     // Create dropdown container
@@ -276,6 +376,7 @@ function handleTimeSpanChange() {
 
 // --- Initialize the App ---
 function initializeWeatherApp() {
+    createLocationForm();
     createTimeSpanDropdown();
     getWeatherData(48); // Default to 48 hours
 }
