@@ -417,11 +417,77 @@ async function geocodeLocation(locationName) {
     }
 }
 
+// --- Create a container for dropdown and location input ---
+function createControlsContainer() {
+    // Create container for both controls
+    const controlsContainer = document.createElement('div');
+    controlsContainer.className = 'controls-container';
+    controlsContainer.style.display = 'flex';
+    controlsContainer.style.justifyContent = 'flex-start'; // Changed from center to flex-start
+    controlsContainer.style.alignItems = 'center';
+    controlsContainer.style.gap = '20px';
+    controlsContainer.style.marginTop = '15px';
+    controlsContainer.style.flexWrap = 'wrap'; // Allow wrapping on small screens
+    controlsContainer.style.paddingLeft = '10%'; // Add padding on the left
+    
+    // Add the container after the chart
+    const chartContainer = document.querySelector('.chart-container');
+    chartContainer.after(controlsContainer);
+    
+    return controlsContainer;
+}
+
+// --- Create Time Span Dropdown ---
+function createTimeSpanDropdown(parentContainer) {
+    // Create dropdown container
+    const dropdownContainer = document.createElement('div');
+    dropdownContainer.className = 'timespan-selector';
+    dropdownContainer.style.textAlign = 'center';
+    dropdownContainer.style.marginRight = '50px'; // Add extra margin to push it left
+    
+    // Create label
+    const label = document.createElement('label');
+    label.textContent = 'Time Span: ';
+    label.setAttribute('for', 'timeSpanSelect');
+    
+    // Create select element
+    const select = document.createElement('select');
+    select.id = 'timeSpanSelect';
+    
+    // Add options
+    const options = [
+        { value: '24', text: '24 hours' },
+        { value: '72', text: '72 hours' },
+        { value: '168', text: '1 week (168h)' },
+        { value: '240', text: '10 days (240h)' }
+    ];
+    
+    options.forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.text;
+        // Default to 48 hours to match original behavior
+        if (opt.value === '48') {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
+    
+    // Add event listener
+    select.addEventListener('change', handleTimeSpanChange);
+    
+    // Assemble dropdown
+    dropdownContainer.appendChild(label);
+    dropdownContainer.appendChild(select);
+    
+    // Add to parent container instead of directly after chart
+    parentContainer.appendChild(dropdownContainer);
+}
+
 // --- Create Location Input Form ---
-function createLocationForm() {
+function createLocationForm(parentContainer) {
     const formContainer = document.createElement('div');
     formContainer.className = 'location-form';
-    formContainer.style.marginBottom = '15px';
     formContainer.style.textAlign = 'center';
     
     // Current location display
@@ -473,57 +539,8 @@ function createLocationForm() {
     formContainer.appendChild(locationDisplay);
     formContainer.appendChild(form);
     
-    // Add before the chart container
-    const chartContainer = document.querySelector('.chart-container');
-    chartContainer.before(formContainer);
-}
-
-// --- Create Time Span Dropdown ---
-function createTimeSpanDropdown() {
-    // Create dropdown container
-    const dropdownContainer = document.createElement('div');
-    dropdownContainer.className = 'timespan-selector';
-    dropdownContainer.style.marginTop = '15px';
-    dropdownContainer.style.textAlign = 'center';
-    
-    // Create label
-    const label = document.createElement('label');
-    label.textContent = 'Time Span: ';
-    label.setAttribute('for', 'timeSpanSelect');
-    
-    // Create select element
-    const select = document.createElement('select');
-    select.id = 'timeSpanSelect';
-    
-    // Add options
-    const options = [
-        { value: '24', text: '24 hours' },
-        { value: '72', text: '72 hours' },
-        { value: '168', text: '1 week (168h)' },
-        { value: '240', text: '10 days (240h)' }
-    ];
-    
-    options.forEach(opt => {
-        const option = document.createElement('option');
-        option.value = opt.value;
-        option.textContent = opt.text;
-        // Default to 48 hours to match original behavior
-        if (opt.value === '48') {
-            option.selected = true;
-        }
-        select.appendChild(option);
-    });
-    
-    // Add event listener
-    select.addEventListener('change', handleTimeSpanChange);
-    
-    // Assemble dropdown
-    dropdownContainer.appendChild(label);
-    dropdownContainer.appendChild(select);
-    
-    // Add after the chart container
-    const chartContainer = document.querySelector('.chart-container');
-    chartContainer.after(dropdownContainer);
+    // Add to parent container instead of after the timespan
+    parentContainer.appendChild(formContainer);
 }
 
 // --- Handle Dropdown Change ---
@@ -542,8 +559,11 @@ function initializeWeatherApp() {
         chartContainer.style.maxWidth = '1800px';
     }
     
-    createLocationForm();
-    createTimeSpanDropdown();
+    // Create a container for controls and add both elements to it
+    const controlsContainer = createControlsContainer();
+    createTimeSpanDropdown(controlsContainer);
+    createLocationForm(controlsContainer);
+    
     getWeatherData(48); // Default to 48 hours
 }
 
