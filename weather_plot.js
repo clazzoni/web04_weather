@@ -48,6 +48,41 @@ async function getWeatherData(timeSpan = 48) {
     }
 }
 
+// --- Helper: Get simplified sunrise/sunset times for a given date ---
+function getSunTimes(date) {
+    // For simplicity, assume sunrise at 6:00 and sunset at 18:00 local time.
+    const sunrise = new Date(date);
+    sunrise.setHours(6, 0, 0, 0);
+    const sunset = new Date(date);
+    sunset.setHours(18, 0, 0, 0);
+    return { sunrise, sunset };
+}
+
+// --- Register Chart.js plugin to draw sun and moon markers ---
+Chart.register({
+    id: 'sunMoonMarker',
+    afterDraw: function(chart, args, options) {
+        const sunTimes = options.sunTimes;
+        if (!sunTimes || sunTimes.length === 0) return;
+        const xScale = chart.scales.x;
+        const ctx = chart.ctx;
+        ctx.save();
+        // Use an emoji-supporting font with larger size to ensure visibility
+        ctx.font = "24px Segoe UI Emoji";
+        ctx.textAlign = "center";
+        // Draw markers 10 pixels above the bottom of the x-axis
+        sunTimes.forEach(function(times) {
+            let sunrisePx = xScale.getPixelForValue(times.sunrise);
+            let sunsetPx = xScale.getPixelForValue(times.sunset);
+            ctx.fillStyle = "orange";
+            ctx.fillText("☀", sunrisePx, xScale.bottom - 10);
+            ctx.fillStyle = "gray";
+            ctx.fillText("🌙", sunsetPx, xScale.bottom - 10);
+        });
+        ctx.restore();
+    }
+});
+
 // --- Process Data and Create Chart ---
 function processWeatherData(apiData, timeSpan = 48) {
     if (!apiData.properties || !apiData.properties.timeseries) {
@@ -116,6 +151,17 @@ function processWeatherData(apiData, timeSpan = 48) {
     console.log("Processed Rain:", rain);
     console.log("Processed Clouds:", clouds);
     console.log("Processed Wind:", wind);
+
+    // Create sunrise/sunset markers only for timespan 24h or 74h
+    let sunTimes = [];
+    if (timeSpan === 24 || timeSpan === 74) {
+        const dayCount = Math.ceil(timeSpan / 24);
+        for (let i = 0; i < dayCount; i++) {
+            const dayDate = new Date(now);
+            dayDate.setDate(now.getDate() + i);
+            sunTimes.push(getSunTimes(dayDate));
+        }
+    }
 
     // Create horizontal reference lines data arrays
     const tempLine0deg = labels.map(() => 0);  // 0°C reference line
@@ -463,7 +509,9 @@ function processWeatherData(apiData, timeSpan = 48) {
                 },
                 title: {
                     display: false, // Ensure no chart title is displayed
-                }
+                },
+                // Pass our calculated sunTimes to the plugin if available
+                sunMoonMarker: { sunTimes: sunTimes }
             },
             interaction: { // Enhance interaction
                 mode: 'index',
