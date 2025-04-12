@@ -108,17 +108,6 @@ function processWeatherData(apiData, timeSpan = 48) {
     console.log("Processed Rain:", rain);
     console.log("Processed Clouds:", clouds);
 
-    // Determine the appropriate grid step size based on the time span
-    let gridStepSize = 1; // Default 1 hour
-    if (timeSpan > 168) { // 10 days (240h)
-        gridStepSize = 12;
-    } else if (timeSpan > 72) { // 1 week (168h)
-        gridStepSize = 6;
-    } else if (timeSpan > 48) { // 72 hours
-        gridStepSize = 2;
-    }
-    
-    console.log(`Using grid step size: ${gridStepSize}h for ${timeSpan}h timespan`);
 
     // --- Create the Chart using Chart.js ---
     if (weatherChart) {
@@ -215,8 +204,8 @@ function processWeatherData(apiData, timeSpan = 48) {
                             hour: 'HH:mm', // Format for hour labels
                             day: 'ddd' // Add day name format (Mon, Tue, Wed, etc.)
                         },
-                        // Dynamic step size based on timespan
-                        stepSize: gridStepSize,
+                        // For longer time periods, adjust unit to ensure day lines are visible
+                        unitStepSize: 12, // Show tick every 12 hours instead of 6
                         bounds: 'ticks',
                         distribution: 'linear'
                     },
@@ -230,7 +219,11 @@ function processWeatherData(apiData, timeSpan = 48) {
                         autoSkipPadding: 20, // Add padding between ticks that are shown
                         includeBounds: true,
                         major: {
-                            enabled: true // Enable major ticks for midnight
+                            enabled: true, // Enable major ticks for midnight
+                            font: {
+                                weight: 'bold', // Make day names bold
+                                size: 56 // Double the size from 28 to 56
+                            }
                         },
                         callback: function(value, index, ticks) {
                             // Safety check
@@ -239,11 +232,9 @@ function processWeatherData(apiData, timeSpan = 48) {
                             const date = new Date(value);
                             const hours = date.getHours();
                             
-                            // Always show day names at midnight
+                            // Always show day names at midnight (in uppercase)
                             if (hours === 0) {
-                                // Get day name, make it uppercase, and apply HTML styling for bold and larger font
-                                const dayName = date.toLocaleDateString('en-US', {weekday: 'short'}).toUpperCase();
-                                return `<span style="font-weight: bold; font-size: 200%">${dayName}</span>`;
+                                return date.toLocaleDateString('en-US', {weekday: 'short'}).toUpperCase();
                             } 
                             
                             // For other hours, show time based on density
@@ -253,7 +244,7 @@ function processWeatherData(apiData, timeSpan = 48) {
                             }
                             
                             return date.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: false});
-                        },
+                        }
                     },
                     afterBuildTicks: function(scale) {
                         // Ensure midnight ticks are included regardless of time span
@@ -307,9 +298,9 @@ function processWeatherData(apiData, timeSpan = 48) {
                                 const hours = date.getHours();
                                 const minutes = date.getMinutes();
                                 
-                                // Make midnight grid lines much thicker
+                                // Make midnight grid lines thicker (now half as thick: 2px instead of 4px)
                                 if (hours === 0 && minutes === 0) {
-                                    return 4;
+                                    return 2;
                                 }
                             }
                             
@@ -317,7 +308,7 @@ function processWeatherData(apiData, timeSpan = 48) {
                             const scale = context.chart.scales.x;
                             if (scale._midnightDates && context.tick && 
                                 scale._midnightDates.includes(context.tick.value)) {
-                                return 4;
+                                return 2; // Also halving the thickness here to maintain consistency
                             }
                             
                             return 1;
