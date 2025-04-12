@@ -48,14 +48,146 @@ async function getWeatherData(timeSpan = 48) {
     }
 }
 
-// --- Helper: Get simplified sunrise/sunset times for a given date ---
+// --- Helper: Get accurate sunrise/sunset times for a given date ---
 function getSunTimes(date) {
-    // For simplicity, assume sunrise at 6:00 and sunset at 18:00 local time.
-    const sunrise = new Date(date);
-    sunrise.setHours(6, 0, 0, 0);
-    const sunset = new Date(date);
-    sunset.setHours(18, 0, 0, 0);
-    return { sunrise, sunset };
+    // Use SunCalc library to get accurate sunrise/sunset times based on location
+    // If SunCalc is not available, fall back to simplified times
+    if (typeof SunCalc !== 'undefined') {
+        const sunTimes = SunCalc.getTimes(date, currentLocation.latitude, currentLocation.longitude);
+        return { 
+            sunrise: sunTimes.sunrise, 
+            sunset: sunTimes.sunset,
+            date: new Date(date)
+        };
+    } else {
+        console.warn('SunCalc library not available. Using simplified sunrise/sunset times.');
+        // Fallback to simplified times
+        const sunrise = new Date(date);
+        sunrise.setHours(6, 0, 0, 0);
+        const sunset = new Date(date);
+        sunset.setHours(18, 0, 0, 0);
+        return { 
+            sunrise, 
+            sunset,
+            date: new Date(date)
+        };
+    }
+}
+
+// --- Create a table showing sunrise/sunset times ---
+function renderSunTimesTable(sunTimes) {
+    // Check if the table container exists, if not create it
+    let tableContainer = document.getElementById('sunTimesTableContainer');
+    if (!tableContainer) {
+        tableContainer = document.createElement('div');
+        tableContainer.id = 'sunTimesTableContainer';
+        tableContainer.style.width = '95%';
+        tableContainer.style.margin = '20px auto';
+        tableContainer.style.maxWidth = '1800px';
+        
+        // Insert after chart container
+        const chartContainer = document.querySelector('.chart-container');
+        if (chartContainer.nextSibling) {
+            chartContainer.parentNode.insertBefore(tableContainer, chartContainer.nextSibling);
+        } else {
+            chartContainer.parentNode.appendChild(tableContainer);
+        }
+    }
+    
+    // Clear previous content
+    tableContainer.innerHTML = '';
+    
+    // Create heading
+    const heading = document.createElement('h3');
+    heading.textContent = 'Sunrise and Sunset Times';
+    heading.style.textAlign = 'center';
+    tableContainer.appendChild(heading);
+    
+    // Create table
+    const table = document.createElement('table');
+    table.style.width = '100%';
+    table.style.borderCollapse = 'collapse';
+    table.style.marginTop = '10px';
+    
+    // Create table header
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    
+    const headers = ['Date', 'Day', 'Sunrise', 'Sunset', 'Daylight Duration'];
+    headers.forEach(text => {
+        const th = document.createElement('th');
+        th.textContent = text;
+        th.style.padding = '8px';
+        th.style.backgroundColor = '#f2f2f2';
+        th.style.border = '1px solid #ddd';
+        headerRow.appendChild(th);
+    });
+    
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+    
+    // Create table body
+    const tbody = document.createElement('tbody');
+    
+    sunTimes.forEach((times, index) => {
+        const row = document.createElement('tr');
+        
+        // Style alternating rows
+        if (index % 2 === 0) {
+            row.style.backgroundColor = '#f9f9f9';
+        }
+        
+        // Format date: YYYY-MM-DD
+        const dateCell = document.createElement('td');
+        dateCell.textContent = times.date.toLocaleDateString();
+        dateCell.style.padding = '8px';
+        dateCell.style.border = '1px solid #ddd';
+        dateCell.style.textAlign = 'center';
+        
+        // Day name
+        const dayCell = document.createElement('td');
+        dayCell.textContent = times.date.toLocaleDateString('en-US', { weekday: 'long' });
+        dayCell.style.padding = '8px';
+        dayCell.style.border = '1px solid #ddd';
+        dayCell.style.textAlign = 'center';
+        
+        // Sunrise time
+        const sunriseCell = document.createElement('td');
+        sunriseCell.textContent = times.sunrise.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        sunriseCell.style.padding = '8px';
+        sunriseCell.style.border = '1px solid #ddd';
+        sunriseCell.style.textAlign = 'center';
+        
+        // Sunset time
+        const sunsetCell = document.createElement('td');
+        sunsetCell.textContent = times.sunset.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        sunsetCell.style.padding = '8px';
+        sunsetCell.style.border = '1px solid #ddd';
+        sunsetCell.style.textAlign = 'center';
+        
+        // Daylight duration
+        const daylightDuration = times.sunset - times.sunrise;
+        const hours = Math.floor(daylightDuration / (1000 * 60 * 60));
+        const minutes = Math.floor((daylightDuration % (1000 * 60 * 60)) / (1000 * 60));
+        
+        const durationCell = document.createElement('td');
+        durationCell.textContent = `${hours}h ${minutes}m`;
+        durationCell.style.padding = '8px';
+        durationCell.style.border = '1px solid #ddd';
+        durationCell.style.textAlign = 'center';
+        
+        // Add cells to row
+        row.appendChild(dateCell);
+        row.appendChild(dayCell);
+        row.appendChild(sunriseCell);
+        row.appendChild(sunsetCell);
+        row.appendChild(durationCell);
+        
+        tbody.appendChild(row);
+    });
+    
+    table.appendChild(tbody);
+    tableContainer.appendChild(table);
 }
 
 // --- Register Chart.js plugin to draw sun and moon markers ---
@@ -152,15 +284,24 @@ function processWeatherData(apiData, timeSpan = 48) {
     console.log("Processed Clouds:", clouds);
     console.log("Processed Wind:", wind);
 
-    // Create sunrise/sunset markers only for timespan 24h or 74h
+    // Create sunrise/sunset markers only for shorter time spans (24h and 72h)
     let sunTimes = [];
-    if (timeSpan === 24 || timeSpan === 74) {
+    if (timeSpan <= 72) {
         const dayCount = Math.ceil(timeSpan / 24);
         for (let i = 0; i < dayCount; i++) {
             const dayDate = new Date(now);
             dayDate.setDate(now.getDate() + i);
             sunTimes.push(getSunTimes(dayDate));
         }
+    }
+
+    // Always generate sunTimes for the table, even if we don't show them on the graph
+    let allSunTimes = [];
+    const dayCount = Math.ceil(timeSpan / 24);
+    for (let i = 0; i < dayCount; i++) {
+        const dayDate = new Date(now);
+        dayDate.setDate(now.getDate() + i);
+        allSunTimes.push(getSunTimes(dayDate));
     }
 
     // Create horizontal reference lines data arrays
@@ -519,6 +660,9 @@ function processWeatherData(apiData, timeSpan = 48) {
             }
         }
     });
+    
+    // Render the sunrise/sunset times table with all sun times, regardless of markers
+    renderSunTimesTable(allSunTimes);
 }
 
 // --- Geocode Location to Coordinates ---
@@ -698,7 +842,20 @@ function initializeWeatherApp() {
     createTimeSpanDropdown(controlsContainer);
     createLocationForm(controlsContainer);
     
-    getWeatherData(48); // Default to 48 hours
+    // Add script for SunCalc library if not already present
+    if (typeof SunCalc === 'undefined') {
+        const suncalcScript = document.createElement('script');
+        suncalcScript.src = 'https://cdn.jsdelivr.net/npm/suncalc@1.9.0/suncalc.min.js';
+        suncalcScript.async = true;
+        document.head.appendChild(suncalcScript);
+        
+        // Wait for SunCalc to load before initializing
+        suncalcScript.onload = function() {
+            getWeatherData(48); // Default to 48 hours
+        };
+    } else {
+        getWeatherData(48); // Default to 48 hours
+    }
 }
 
 // --- Initial Load ---
