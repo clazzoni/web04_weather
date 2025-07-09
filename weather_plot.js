@@ -1,5 +1,3 @@
-
-
 // Default coordinates for Älta, Sweden
 
 let currentLocation = {
@@ -975,6 +973,14 @@ function renderDataTable(labels, temps, rain, clouds, wind) {
     // Check if the table container exists, if not create it
     let dataTableContainer = document.getElementById('dataTableContainer');
     if (!dataTableContainer) {
+        // Create a separator first
+        const separator = document.createElement('div');
+        separator.style.width = '100%';
+        separator.style.margin = '60px 0 20px 0';
+        separator.style.borderTop = '2px solid #ccc';
+        document.body.appendChild(separator);
+        
+        // Create the data table container
         dataTableContainer = document.createElement('div');
         dataTableContainer.id = 'dataTableContainer';
         dataTableContainer.style.width = '95%';
@@ -982,27 +988,31 @@ function renderDataTable(labels, temps, rain, clouds, wind) {
         dataTableContainer.style.maxWidth = '1800px';
         dataTableContainer.style.overflowX = 'auto'; // Add horizontal scroll for small screens
         
-        // Insert after sunrise/sunset table
-        const sunTimesTable = document.getElementById('sunTimesTableContainer');
-        if (sunTimesTable) {
-            sunTimesTable.after(dataTableContainer);
-        } else {
-            // Fallback to inserting after chart container
-            const chartContainer = document.querySelector('.chart-container');
-            chartContainer.parentNode.insertBefore(dataTableContainer, chartContainer.nextSibling);
-        }
+        // Insert at the very bottom of the page
+        document.body.appendChild(dataTableContainer);
     }
     
     // Clear previous content
     dataTableContainer.innerHTML = '';
     
     // Create heading
-    const heading = document.createElement('h3');
+    const heading = document.createElement('h2');
     heading.textContent = 'Weather Data Details';
     heading.style.textAlign = 'center';
     heading.style.fontFamily = "'Roboto', sans-serif";
-    heading.style.marginBottom = '15px';
+    heading.style.marginBottom = '10px';
+    heading.style.marginTop = '40px';
+    heading.style.paddingTop = '20px';
     dataTableContainer.appendChild(heading);
+    
+    // Add explanatory text
+    const explanation = document.createElement('p');
+    explanation.textContent = 'The table below shows the complete numerical weather data displayed in the graph above. You can download the full dataset as a CSV file using the button at the bottom of the table.';
+    explanation.style.textAlign = 'center';
+    explanation.style.fontFamily = "'Roboto', sans-serif";
+    explanation.style.marginBottom = '20px';
+    explanation.style.color = '#555';
+    dataTableContainer.appendChild(explanation);
     
     // Create table
     const table = document.createElement('table');
@@ -1155,7 +1165,27 @@ function renderDataTable(labels, temps, rain, clouds, wind) {
         document.body.removeChild(link);
     });
     
+    // Add a "Back to Top" button
+    const backToTopBtn = document.createElement('button');
+    backToTopBtn.textContent = 'Back to Top';
+    backToTopBtn.style.marginLeft = '15px';
+    backToTopBtn.style.padding = '8px 16px';
+    backToTopBtn.style.cursor = 'pointer';
+    backToTopBtn.style.backgroundColor = '#2196F3';
+    backToTopBtn.style.color = 'white';
+    backToTopBtn.style.border = 'none';
+    backToTopBtn.style.borderRadius = '4px';
+    backToTopBtn.style.fontFamily = "'Roboto', sans-serif";
+    
+    backToTopBtn.addEventListener('click', function() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    });
+    
     downloadContainer.appendChild(downloadBtn);
+    downloadContainer.appendChild(backToTopBtn);
     dataTableContainer.appendChild(downloadContainer);
 }
 
