@@ -1,3 +1,5 @@
+
+
 // Default coordinates for Älta, Sweden
 
 let currentLocation = {
@@ -6,9 +8,16 @@ let currentLocation = {
     longitude: 18.18
 };
 
+// --- Weather Source ---
+// Using MET Norway as the sole weather data provider
+const weatherSource = { 
+    name: 'MET Norway', 
+    url: 'https://api.met.no/weatherapi/locationforecast/2.0/compact' 
+};
+
 // API endpoint for MET Norway Locationforecast 2.0 (Compact format)
 function getApiUrl() {
-    return `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${currentLocation.latitude}&lon=${currentLocation.longitude}`;
+    return `${weatherSource.url}?lat=${currentLocation.latitude}&lon=${currentLocation.longitude}`;
 }
 
 // Get the canvas element from HTML
@@ -196,129 +205,129 @@ function renderSunTimesTable(sunTimes) {
 }
 
 // --- Create a solar system diagram showing planetary positions ---
-function renderSolarSystemDiagram() {
-    // Check if the container exists, if not create it
-    let solarSystemContainer = document.getElementById('solarSystemContainer');
-    if (!solarSystemContainer) {
-        solarSystemContainer = document.createElement('div');
-        solarSystemContainer.id = 'solarSystemContainer';
-        solarSystemContainer.style.width = '95%';
-        solarSystemContainer.style.margin = '40px auto';
-        solarSystemContainer.style.maxWidth = '1000px';
-        solarSystemContainer.style.height = '700px'; // Increased from 500px to 700px for more vertical space
+// function renderSolarSystemDiagram() {
+//     // Check if the container exists, if not create it
+//     let solarSystemContainer = document.getElementById('solarSystemContainer');
+//     if (!solarSystemContainer) {
+//         solarSystemContainer = document.createElement('div');
+//         solarSystemContainer.id = 'solarSystemContainer';
+//         solarSystemContainer.style.width = '95%';
+//         solarSystemContainer.style.margin = '40px auto';
+//         solarSystemContainer.style.maxWidth = '1000px';
+//         solarSystemContainer.style.height = '700px'; // Increased from 500px to 700px for more vertical space
         
-        // Create heading
-        const heading = document.createElement('h3');
-        heading.textContent = 'Current Planetary Positions';
-        heading.style.textAlign = 'center';
-        heading.style.fontFamily = "'Roboto', sans-serif";
-        solarSystemContainer.appendChild(heading);
+//         // Create heading
+//         const heading = document.createElement('h3');
+//         heading.textContent = 'Current Planetary Positions';
+//         heading.style.textAlign = 'center';
+//         heading.style.fontFamily = "'Roboto', sans-serif";
+//         solarSystemContainer.appendChild(heading);
         
-        // Create canvas for the diagram
-        const canvas = document.createElement('canvas');
-        canvas.id = 'solarSystemCanvas';
-        canvas.width = 1000;
-        canvas.height = 700; // Increased from 500px to 700px to match container
-        canvas.style.width = '100%';
-        canvas.style.height = '100%';
-        canvas.style.display = 'block';
-        canvas.style.margin = '0 auto';
-        solarSystemContainer.appendChild(canvas);
+//         // Create canvas for the diagram
+//         const canvas = document.createElement('canvas');
+//         canvas.id = 'solarSystemCanvas';
+//         canvas.width = 1000;
+//         canvas.height = 700; // Increased from 500px to 700px to match container
+//         canvas.style.width = '100%';
+//         canvas.style.height = '100%';
+//         canvas.style.display = 'block';
+//         canvas.style.margin = '0 auto';
+//         solarSystemContainer.appendChild(canvas);
         
-        // Add a time display
-        const timeDisplay = document.createElement('div');
-        timeDisplay.id = 'planetaryTimeDisplay';
-        timeDisplay.style.textAlign = 'center';
-        timeDisplay.style.marginTop = '10px';
-        timeDisplay.style.fontSize = '14px';
-        timeDisplay.style.fontFamily = "'Roboto', sans-serif";
-        solarSystemContainer.appendChild(timeDisplay);
+//         // Add a time display
+//         const timeDisplay = document.createElement('div');
+//         timeDisplay.id = 'planetaryTimeDisplay';
+//         timeDisplay.style.textAlign = 'center';
+//         timeDisplay.style.marginTop = '10px';
+//         timeDisplay.style.fontSize = '14px';
+//         timeDisplay.style.fontFamily = "'Roboto', sans-serif";
+//         solarSystemContainer.appendChild(timeDisplay);
         
-        // Insert after the controls container (which contains Time Span dropdown and location input)
-        const controlsContainer = document.querySelector('.controls-container');
-        if (controlsContainer) {
-            controlsContainer.after(solarSystemContainer);
-        } else {
-            // Fallback to inserting after chart container
-            const chartContainer = document.querySelector('.chart-container');
-            chartContainer.after(solarSystemContainer);
-        }
-    }
+//         // Insert after the controls container (which contains Time Span dropdown and location input)
+//         const controlsContainer = document.querySelector('.controls-container');
+//         if (controlsContainer) {
+//             controlsContainer.after(solarSystemContainer);
+//         } else {
+//             // Fallback to inserting after chart container
+//             const chartContainer = document.querySelector('.chart-container');
+//             chartContainer.after(solarSystemContainer);
+//         }
+//     }
     
-    // Now draw the solar system
-    drawSolarSystem();
-}
+//     // Now draw the solar system
+//     drawSolarSystem();
+// }
 
 // --- Calculate and draw the solar system ---
-function drawSolarSystem() {
-    const canvas = document.getElementById('solarSystemCanvas');
-    if (!canvas) return;
+// function drawSolarSystem() {
+//     const canvas = document.getElementById('solarSystemCanvas');
+//     if (!canvas) return;
     
-    const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
-    const centerX = width / 2;
-    const centerY = height / 2;
+//     const ctx = canvas.getContext('2d');
+//     const width = canvas.width;
+//     const height = canvas.height;
+//     const centerX = width / 2;
+//     const centerY = height / 2;
     
-    // Clear canvas
-    ctx.clearRect(0, 0, width, height);
+//     // Clear canvas
+//     ctx.clearRect(0, 0, width, height);
     
-    // Set current date
-    const now = new Date();
-    document.getElementById('planetaryTimeDisplay').textContent = 
-        `Planetary positions for: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+//     // Set current date
+//     const now = new Date();
+//     document.getElementById('planetaryTimeDisplay').textContent = 
+//         `Planetary positions for: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
     
-    // Draw Sun
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, 15, 0, Math.PI * 2);
-    ctx.fillStyle = 'yellow';
-    ctx.fill();
+//     // Draw Sun
+//     ctx.beginPath();
+//     ctx.arc(centerX, centerY, 15, 0, Math.PI * 2);
+//     ctx.fillStyle = 'yellow';
+//     ctx.fill();
     
-    // Draw orbit circles
-    const orbits = [0.39, 0.72, 1, 1.52, 5.2, 9.58, 19.18, 30.07];
-    const orbitLabels = ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'];
-    const orbitColors = ['gray', 'orange', 'blue', 'red', 'brown', 'goldenrod', 'lightblue', 'blue'];
-    const scaleFactor = 35; // Reduced from 50 to 35 to fit all planets in the visible area
+//     // Draw orbit circles
+//     const orbits = [0.39, 0.72, 1, 1.52, 5.2, 9.58, 19.18, 30.07];
+//     const orbitLabels = ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'];
+//     const orbitColors = ['gray', 'orange', 'blue', 'red', 'brown', 'goldenrod', 'lightblue', 'blue'];
+//     const scaleFactor = 35; // Reduced from 50 to 35 to fit all planets in the visible area
     
-    // Draw orbits
-    for (let i = 0; i < orbits.length; i++) {
-        const radius = orbits[i] * scaleFactor;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
-        ctx.stroke();
-    }
+//     // Draw orbits
+//     for (let i = 0; i < orbits.length; i++) {
+//         const radius = orbits[i] * scaleFactor;
+//         ctx.beginPath();
+//         ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+//         ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
+//         ctx.stroke();
+//     }
     
-    // Calculate planet positions
-    // These are simplified calculations; in a real scenario, you would use more precise formulas
-    const planetPositions = calculatePlanetPositions(now);
+//     // Calculate planet positions
+//     // These are simplified calculations; in a real scenario, you would use more precise formulas
+//     const planetPositions = calculatePlanetPositions(now);
     
-    // Draw planets
-    for (let i = 0; i < orbits.length; i++) {
-        const radius = orbits[i] * scaleFactor;
-        const angle = planetPositions[i]; // Angle in radians
+//     // Draw planets
+//     for (let i = 0; i < orbits.length; i++) {
+//         const radius = orbits[i] * scaleFactor;
+//         const angle = planetPositions[i]; // Angle in radians
         
-        // Calculate position
-        const x = centerX + radius * Math.cos(angle);
-        const y = centerY + radius * Math.sin(angle);
+//         // Calculate position
+//         const x = centerX + radius * Math.cos(angle);
+//         const y = centerY + radius * Math.sin(angle);
         
-        // Draw planet
-        ctx.beginPath();
-        ctx.arc(x, y, i === 4 || i === 5 ? 8 : 5, 0, Math.PI * 2); // Make Jupiter and Saturn larger
-        ctx.fillStyle = orbitColors[i];
-        ctx.fill();
+//         // Draw planet
+//         ctx.beginPath();
+//         ctx.arc(x, y, i === 4 || i === 5 ? 8 : 5, 0, Math.PI * 2); // Make Jupiter and Saturn larger
+//         ctx.fillStyle = orbitColors[i];
+//         ctx.fill();
         
-        // Add label
-        ctx.font = "12px 'Roboto', sans-serif";
-        ctx.fillStyle = 'black';
+//         // Add label
+//         ctx.font = "12px 'Roboto', sans-serif";
+//         ctx.fillStyle = 'black';
         
-        // Position labels to avoid overlap with orbits
-        const labelX = x + (i === 4 || i === 5 ? 10 : 7) * Math.cos(angle);
-        const labelY = y + (i === 4 || i === 5 ? 10 : 7) * Math.sin(angle);
+//         // Position labels to avoid overlap with orbits
+//         const labelX = x + (i === 4 || i === 5 ? 10 : 7) * Math.cos(angle);
+//         const labelY = y + (i === 4 || i === 5 ? 10 : 7) * Math.sin(angle);
         
-        ctx.fillText(orbitLabels[i], labelX, labelY);
-    }
-}
+//         ctx.fillText(orbitLabels[i], labelX, labelY);
+//     }
+// }
 
 // --- Calculate more accurate planet positions ---
 function calculatePlanetPositions(date) {
@@ -423,55 +432,116 @@ function processWeatherData(apiData, timeSpan = 48) {
     const now = new Date();
     const endTime = new Date(now.getTime() + timeSpan * 60 * 60 * 1000);
 
+    // --- ULTRA-HIGH SAMPLING DENSITY ---
+    // Use different sampling rates based on the timespan with even higher density
+    let samplingIntervalMinutes;
+    if (timeSpan <= 72) {
+        samplingIntervalMinutes = 5; // 5 min sampling (six times higher than original 30 min)
+    } else if (timeSpan <= 168) {
+        samplingIntervalMinutes = 10; // 10 min sampling (six times higher than original 60 min)
+    } else {
+        samplingIntervalMinutes = 15; // 15 min sampling (six times higher than original 90 min)
+    }
+    
+    console.log(`Using ultra-high sampling interval of ${samplingIntervalMinutes} minutes for ${timeSpan} hour graph`);
+
     const labels = []; // X-axis labels (time)
     const temps = [];  // Y-axis data (temperature)
     const rain = [];   // Y-axis data (precipitation)
     const clouds = []; // Y-axis data (cloud cover)
     const wind = [];   // Y-axis data (wind speed)
 
+    // Create interpolation function
+    function linearInterpolate(value1, value2, factor) {
+        if (value1 === null || value2 === null) return null;
+        return value1 + (value2 - value1) * factor;
+    }
+
+    // First collect raw data points
+    const rawPoints = [];
+    
     timeseries.forEach(entry => {
         const time = new Date(entry.time);
-
-        // Filter data for the desired time range
         if (time >= now && time <= endTime) {
-            labels.push(time); // Use Date objects for time scale
-
-            // Get temperature (usually in instant.details)
-            if (entry.data?.instant?.details?.air_temperature !== undefined) {
-                temps.push(entry.data.instant.details.air_temperature);
-            } else {
-                temps.push(null); // Handle missing data
-            }
-
-            // Get precipitation (usually in next_1_hours.details)
-            if (entry.data?.next_1_hours?.details?.precipitation_amount !== undefined) {
-                rain.push(entry.data.next_1_hours.details.precipitation_amount);
-            } else {
-                 // Check next_6_hours if 1-hour data is missing (API structure varies)
-                 if (entry.data?.next_6_hours?.details?.precipitation_amount !== undefined) {
-                    // Distribute 6-hour value over 1-hour intervals (approximate)
-                    // For simplicity, assign 0 for now, or implement distribution logic
-                    rain.push(0);
-                 } else {
-                     rain.push(0); // Assume 0 if no data for the hour
-                 }
-            }
-
-            // Get cloud cover (usually in instant.details)
-            if (entry.data?.instant?.details?.cloud_area_fraction !== undefined) {
-                clouds.push(entry.data.instant.details.cloud_area_fraction);
-            } else {
-                clouds.push(null); // Handle missing data
-            }
-            
-            // Get wind speed (usually in instant.details)
-            if (entry.data?.instant?.details?.wind_speed !== undefined) {
-                wind.push(entry.data.instant.details.wind_speed);
-            } else {
-                wind.push(null); // Handle missing data
-            }
+            rawPoints.push({
+                time: time,
+                temp: entry.data?.instant?.details?.air_temperature,
+                rain: entry.data?.next_1_hours?.details?.precipitation_amount || 0,
+                cloud: entry.data?.instant?.details?.cloud_area_fraction,
+                wind: entry.data?.instant?.details?.wind_speed
+            });
         }
     });
+    
+    // Generate ultra-high-density data points through interpolation
+    if (rawPoints.length > 1) {
+        // Calculate how many points we need for the desired density
+        const targetCount = Math.ceil((endTime - now) / (samplingIntervalMinutes * 60 * 1000));
+        console.log(`Generating ${targetCount} data points (ultra-high density sampling)`);
+        
+        // Sort raw points by time to ensure proper interpolation
+        rawPoints.sort((a, b) => a.time - b.time);
+        
+        // Pre-calculate time ranges for better performance with ultra-high density
+        const timeRanges = [];
+        for (let j = 0; j < rawPoints.length - 1; j++) {
+            timeRanges.push({
+                start: rawPoints[j].time.getTime(),
+                end: rawPoints[j+1].time.getTime(),
+                index: j
+            });
+        }
+        
+        for (let i = 0; i < targetCount; i++) {
+            const targetTime = new Date(now.getTime() + i * samplingIntervalMinutes * 60 * 1000);
+            const targetTimeMs = targetTime.getTime();
+            
+            // Find the raw data points surrounding our target time using optimized lookup
+            let lowerIndex = -1;
+            for (let j = 0; j < timeRanges.length; j++) {
+                const range = timeRanges[j];
+                if (range.start <= targetTimeMs && targetTimeMs <= range.end) {
+                    lowerIndex = range.index;
+                    break;
+                }
+            }
+            
+            if (lowerIndex >= 0) {
+                // We found surrounding points, so interpolate between them
+                const lowerPoint = rawPoints[lowerIndex];
+                const upperPoint = rawPoints[lowerIndex + 1];
+                const totalTimeDiff = upperPoint.time - lowerPoint.time;
+                const currentTimeDiff = targetTime - lowerPoint.time;
+                const factor = currentTimeDiff / totalTimeDiff;
+                
+                labels.push(targetTime);
+                temps.push(linearInterpolate(lowerPoint.temp, upperPoint.temp, factor));
+                // For precipitation, use the nearest value instead of interpolating
+                rain.push(targetTime - lowerPoint.time < upperPoint.time - targetTime ? 
+                          lowerPoint.rain : upperPoint.rain);
+                clouds.push(linearInterpolate(lowerPoint.cloud, upperPoint.cloud, factor));
+                wind.push(linearInterpolate(lowerPoint.wind, upperPoint.wind, factor));
+            }
+        }
+    } else {
+        // Fallback to direct sampling if we don't have enough raw points
+        console.log("Falling back to direct sampling - not enough raw data points for interpolation");
+        
+        let lastSampleTime = null;
+        timeseries.forEach(entry => {
+            const time = new Date(entry.time);
+            if (time >= now && time <= endTime) {
+                if (!lastSampleTime || (time - lastSampleTime) >= samplingIntervalMinutes * 60 * 1000) {
+                    labels.push(time);
+                    temps.push(entry.data?.instant?.details?.air_temperature ?? null);
+                    rain.push(entry.data?.next_1_hours?.details?.precipitation_amount || 0);
+                    clouds.push(entry.data?.instant?.details?.cloud_area_fraction ?? null);
+                    wind.push(entry.data?.instant?.details?.wind_speed ?? null);
+                    lastSampleTime = time;
+                }
+            }
+        });
+    }
 
     console.log("Processed Labels:", labels);
     console.log("Processed Temps:", temps);
@@ -668,13 +738,13 @@ function processWeatherData(apiData, timeSpan = 48) {
                             hour: 'HH:mm', // Format for hour labels
                             day: 'ddd' // Add day name format (Mon, Tue, Wed, etc.)
                         },
-                        // For longer time periods, adjust unit to ensure day lines are visible
-                        unitStepSize: 12, // Show tick every 12 hours instead of 6
+                        // Adaptive step size based on timespan
+                        unitStepSize: timeSpan <= 72 ? 6 : (timeSpan <= 168 ? 12 : 24),
                         bounds: 'ticks',
                         distribution: 'linear'
                     },
                     title: {
-                        display: false, // Changed to false to remove the title
+                        display: false // Changed to false to remove the title
                     },
                     ticks: {
                         source: 'auto', // Changed from 'data' to use automatic tick generation
@@ -700,85 +770,68 @@ function processWeatherData(apiData, timeSpan = 48) {
                             const date = new Date(value);
                             const hours = date.getHours();
                             
-                            // Always show day names at midnight (in uppercase)
+                            // Always show day names at midnight (in uppercase and bold)
                             if (hours === 0) {
-                                return date.toLocaleDateString('en-US', {weekday: 'short'}).toUpperCase();
+                                // Add the date to make each day fully identifiable
+                                return date.toLocaleDateString('en-US', {
+                                    weekday: 'short', 
+                                    day: 'numeric'
+                                }).toUpperCase();
                             } 
                             
                             // For other hours, show time based on density
                             if (ticks.length > 48) {
-                                // For longer periods, only show noon
-                                return hours === 12 ? '12:00' : '';
+                                // For longer periods, only show every 6 hours
+                                return hours % 6 === 0 ? 
+                                    date.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: false}) : '';
                             }
                             
                             return date.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: false});
                         }
                     },
                     afterBuildTicks: function(scale) {
-                        // Ensure midnight ticks are included regardless of time span
                         const ticks = scale.ticks;
+
+                        // Find the first day in our data range
                         const startDay = new Date(ticks[0].value);
                         startDay.setHours(0, 0, 0, 0); // Set to midnight
-                        
+
                         const endDay = new Date(ticks[ticks.length - 1].value);
                         endDay.setHours(0, 0, 0, 0); // Set to midnight
-                        
+
                         // Calculate number of days
-                        const days = Math.ceil((endDay - startDay) / (24 * 60 * 60 * 1000)) + 1;
-                        
-                        // For each day, ensure we have a midnight tick
-                        for (let i = 0; i < days; i++) {
+                        const dayDiff = Math.ceil((endDay - startDay) / (24 * 60 * 60 * 1000));
+
+                        // Clear any existing midnight dates
+                        scale._midnightDates = [];
+
+                        // For each day, add a midnight marker
+                        for (let i = 0; i <= dayDiff; i++) {
                             const midnightDate = new Date(startDay);
                             midnightDate.setDate(startDay.getDate() + i);
-                            
-                            // Mark this date for a grid line
-                            scale._midnightDates = scale._midnightDates || [];
-                            scale._midnightDates.push(midnightDate.getTime());
+
+                            // Only add if it's within our time range
+                            if (midnightDate >= new Date(ticks[0].value) && 
+                                midnightDate <= new Date(ticks[ticks.length - 1].value)) {
+                                scale._midnightDates.push(midnightDate.getTime());
+                            }
                         }
                     },
                     grid: {
                         color: function(context) {
-                            // Special handling for midnight lines to ensure they're visible
-                            if (context.tick && context.tick.value) {
-                                const date = new Date(context.tick.value);
-                                const hours = date.getHours();
-                                const minutes = date.getMinutes();
-                                
-                                // Make midnight grid lines significantly darker
-                                if (hours === 0 && minutes === 0) {
-                                    return 'rgba(0, 0, 0, 0.5)';
-                                }
-                            }
-                            
-                            // Check against our saved midnight dates
                             const scale = context.chart.scales.x;
                             if (scale._midnightDates && context.tick && 
                                 scale._midnightDates.includes(context.tick.value)) {
-                                return 'rgba(0, 0, 0, 0.5)';
+                                return 'rgba(0, 0, 0, 0.7)';
                             }
-                            
                             return 'rgba(0, 0, 0, 0.1)';
                         },
                         lineWidth: function(context) {
-                            // Special handling for midnight lines to ensure they're visible
-                            if (context.tick && context.tick.value) {
-                                const date = new Date(context.tick.value);
-                                const hours = date.getHours();
-                                const minutes = date.getMinutes();
-                                
-                                // Make midnight grid lines thicker (now half as thick: 2px instead of 4px)
-                                if (hours === 0 && minutes === 0) {
-                                    return 2;
-                                }
-                            }
-                            
-                            // Check against our saved midnight dates
                             const scale = context.chart.scales.x;
                             if (scale._midnightDates && context.tick && 
                                 scale._midnightDates.includes(context.tick.value)) {
-                                return 2; // Also halving the thickness here to maintain consistency
+                                return 3;
                             }
-                            
                             return 1;
                         }
                     }
@@ -893,23 +946,217 @@ function processWeatherData(apiData, timeSpan = 48) {
                     }
                 },
                 title: {
-                    display: false, // Ensure no chart title is displayed
+                    display: false // Ensure no chart title is displayed
                 },
                 // Pass our calculated sunTimes to the plugin if available
-                sunMoonMarker: { sunTimes: sunTimes }
+                sunMoonMarker: { 
+                    sunTimes: sunTimes 
+                }
             },
             interaction: { // Enhance interaction
                 mode: 'index',
-                intersect: false,
+                intersect: false
             }
         }
     });
     
     // First render the solar system diagram (below controls)
-    renderSolarSystemDiagram();
+    // renderSolarSystemDiagram();
     
     // Then render the sunrise/sunset times table (will appear below the diagram)
     renderSunTimesTable(allSunTimes);
+    
+    // Finally, render the data table showing all graph data
+    renderDataTable(labels, temps, rain, clouds, wind);
+}
+
+// --- Create a data table showing all graph data ---
+function renderDataTable(labels, temps, rain, clouds, wind) {
+    // Check if the table container exists, if not create it
+    let dataTableContainer = document.getElementById('dataTableContainer');
+    if (!dataTableContainer) {
+        dataTableContainer = document.createElement('div');
+        dataTableContainer.id = 'dataTableContainer';
+        dataTableContainer.style.width = '95%';
+        dataTableContainer.style.margin = '30px auto';
+        dataTableContainer.style.maxWidth = '1800px';
+        dataTableContainer.style.overflowX = 'auto'; // Add horizontal scroll for small screens
+        
+        // Insert after sunrise/sunset table
+        const sunTimesTable = document.getElementById('sunTimesTableContainer');
+        if (sunTimesTable) {
+            sunTimesTable.after(dataTableContainer);
+        } else {
+            // Fallback to inserting after chart container
+            const chartContainer = document.querySelector('.chart-container');
+            chartContainer.parentNode.insertBefore(dataTableContainer, chartContainer.nextSibling);
+        }
+    }
+    
+    // Clear previous content
+    dataTableContainer.innerHTML = '';
+    
+    // Create heading
+    const heading = document.createElement('h3');
+    heading.textContent = 'Weather Data Details';
+    heading.style.textAlign = 'center';
+    heading.style.fontFamily = "'Roboto', sans-serif";
+    heading.style.marginBottom = '15px';
+    dataTableContainer.appendChild(heading);
+    
+    // Create table
+    const table = document.createElement('table');
+    table.style.width = '100%';
+    table.style.borderCollapse = 'collapse';
+    table.style.fontFamily = "'Roboto', sans-serif";
+    table.style.fontSize = '14px';
+    
+    // Create table header
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    
+    const headers = ['Time', 'Date', 'Temperature (°C)', 'Precipitation (mm/hr)', 'Cloud Cover (%)', 'Wind Speed (m/s)'];
+    headers.forEach(text => {
+        const th = document.createElement('th');
+        th.textContent = text;
+        th.style.padding = '8px';
+        th.style.backgroundColor = '#f2f2f2';
+        th.style.border = '1px solid #ddd';
+        th.style.position = 'sticky';
+        th.style.top = '0';
+        headerRow.appendChild(th);
+    });
+    
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+    
+    // Create table body
+    const tbody = document.createElement('tbody');
+    
+    // Limit to max 500 rows to prevent performance issues
+    const maxRows = Math.min(labels.length, 500);
+    
+    for (let i = 0; i < maxRows; i++) {
+        const row = document.createElement('tr');
+        
+        // Style alternating rows
+        if (i % 2 === 0) {
+            row.style.backgroundColor = '#f9f9f9';
+        }
+        
+        // Time column
+        const timeCell = document.createElement('td');
+        timeCell.textContent = new Date(labels[i]).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false});
+        timeCell.style.padding = '6px';
+        timeCell.style.border = '1px solid #ddd';
+        timeCell.style.textAlign = 'center';
+        
+        // Date column
+        const dateCell = document.createElement('td');
+        dateCell.textContent = new Date(labels[i]).toLocaleDateString();
+        dateCell.style.padding = '6px';
+        dateCell.style.border = '1px solid #ddd';
+        dateCell.style.textAlign = 'center';
+        
+        // Temperature column
+        const tempCell = document.createElement('td');
+        tempCell.textContent = temps[i] !== null ? temps[i].toFixed(1) : 'N/A';
+        tempCell.style.padding = '6px';
+        tempCell.style.border = '1px solid #ddd';
+        tempCell.style.textAlign = 'center';
+        
+        // Precipitation column
+        const rainCell = document.createElement('td');
+        rainCell.textContent = rain[i] !== null ? rain[i].toFixed(1) : '0.0';
+        rainCell.style.padding = '6px';
+        rainCell.style.border = '1px solid #ddd';
+        rainCell.style.textAlign = 'center';
+        
+        // Cloud cover column
+        const cloudCell = document.createElement('td');
+        cloudCell.textContent = clouds[i] !== null ? clouds[i].toFixed(0) : 'N/A';
+        cloudCell.style.padding = '6px';
+        cloudCell.style.border = '1px solid #ddd';
+        cloudCell.style.textAlign = 'center';
+        
+        // Wind speed column
+        const windCell = document.createElement('td');
+        windCell.textContent = wind[i] !== null ? wind[i].toFixed(1) : 'N/A';
+        windCell.style.padding = '6px';
+        windCell.style.border = '1px solid #ddd';
+        windCell.style.textAlign = 'center';
+        
+        // Add cells to row
+        row.appendChild(timeCell);
+        row.appendChild(dateCell);
+        row.appendChild(tempCell);
+        row.appendChild(rainCell);
+        row.appendChild(cloudCell);
+        row.appendChild(windCell);
+        
+        tbody.appendChild(row);
+    }
+    
+    // Add a message if data was limited
+    if (labels.length > maxRows) {
+        const infoRow = document.createElement('tr');
+        const infoCell = document.createElement('td');
+        infoCell.colSpan = 6;
+        infoCell.textContent = `Showing ${maxRows} of ${labels.length} data points to maintain performance.`;
+        infoCell.style.padding = '8px';
+        infoCell.style.textAlign = 'center';
+        infoCell.style.fontStyle = 'italic';
+        infoCell.style.backgroundColor = '#f2f2f2';
+        infoRow.appendChild(infoCell);
+        tbody.appendChild(infoRow);
+    }
+    
+    table.appendChild(tbody);
+    dataTableContainer.appendChild(table);
+    
+    // Add a download link for the full data
+    const downloadContainer = document.createElement('div');
+    downloadContainer.style.textAlign = 'center';
+    downloadContainer.style.marginTop = '15px';
+    
+    const downloadBtn = document.createElement('button');
+    downloadBtn.textContent = 'Download Full Data (CSV)';
+    downloadBtn.style.padding = '8px 16px';
+    downloadBtn.style.cursor = 'pointer';
+    downloadBtn.style.backgroundColor = '#4CAF50';
+    downloadBtn.style.color = 'white';
+    downloadBtn.style.border = 'none';
+    downloadBtn.style.borderRadius = '4px';
+    downloadBtn.style.fontFamily = "'Roboto', sans-serif";
+    
+    downloadBtn.addEventListener('click', function() {
+        // Create CSV content
+        let csvContent = 'Time,Date,Temperature (°C),Precipitation (mm/hr),Cloud Cover (%),Wind Speed (m/s)\n';
+        
+        for (let i = 0; i < labels.length; i++) {
+            const date = new Date(labels[i]);
+            const timeStr = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false});
+            const dateStr = date.toLocaleDateString();
+            const tempStr = temps[i] !== null ? temps[i].toFixed(1) : 'N/A';
+            const rainStr = rain[i] !== null ? rain[i].toFixed(1) : '0.0';
+            const cloudStr = clouds[i] !== null ? clouds[i].toFixed(0) : 'N/A';
+            const windStr = wind[i] !== null ? wind[i].toFixed(1) : 'N/A';
+            
+            csvContent += `${timeStr},${dateStr},${tempStr},${rainStr},${cloudStr},${windStr}\n`;
+        }
+        
+        // Create a download link
+        const encodedUri = encodeURI('data:text/csv;charset=utf-8,' + csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', `weather_data_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+    
+    downloadContainer.appendChild(downloadBtn);
+    dataTableContainer.appendChild(downloadContainer);
 }
 
 // --- Geocode Location to Coordinates ---
@@ -1068,6 +1315,25 @@ function createLocationForm(parentContainer) {
     parentContainer.appendChild(formContainer);
 }
 
+// --- Display Weather Source Info ---
+function displayWeatherSource() {
+    const sourceContainer = document.getElementById('weatherSourceContainer');
+    if (!sourceContainer) {
+        const container = document.createElement('div');
+        container.id = 'weatherSourceContainer';
+        container.style.textAlign = 'center';
+        container.style.marginTop = '20px';
+        container.style.fontFamily = "'Roboto', sans-serif";
+        container.style.fontSize = '14px';
+        container.innerHTML = `<p>Weather data provided by <strong>${weatherSource.name}</strong></p>`;
+
+        const chartContainer = document.querySelector('.chart-container');
+        chartContainer.after(container);
+    } else {
+        sourceContainer.innerHTML = `<p>Weather data provided by <strong>${weatherSource.name}</strong></p>`;
+    }
+}
+
 // --- Handle Dropdown Change ---
 function handleTimeSpanChange() {
     const timeSpan = parseInt(document.getElementById('timeSpanSelect').value);
@@ -1147,6 +1413,8 @@ function initializeWeatherApp() {
     } else {
         getWeatherData(48); // Default to 48 hours
     }
+
+    displayWeatherSource();
 }
 
 // --- Initial Load ---
