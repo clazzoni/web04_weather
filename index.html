@@ -1,33 +1,581 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title></title>
-    <style>
-        body { font-family: sans-serif; }
-        .chart-container {
-            position: relative;
-            margin: auto;
-            height: 60vh; /* Responsive height */
-            width: 90vw;  /* Responsive width */
-            max-width: 900px; /* Max width */
-        }
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/moment@2.30.1/moment.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.1/dist/chartjs-adapter-moment.min.js"></script>
-
+  <meta charset="utf-8"/>
+  <title>Weather + Solar System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <!-- SunCalc & VSOP87-WASM -->
+  <script src="https://cdn.jsdelivr.net/npm/suncalc@1.9.0/suncalc.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vsop87-wasm@0.2.0/dist/vsop87.min.js"></script>
+  <style>
+    body{font-family:Roboto,Helvetica,Arial,sans-serif;margin:0;padding:0;background:#fafafa;color:#222}
+    #urlHeader{padding:10px 20px;background:#f8f9fa;border-bottom:1px solid #ddd;font-weight:bold}
+    #urlHeader a{color:#0066cc;text-decoration:none}
+    .chart-container{width:95%;max-width:1800px;margin:20px auto;height:70vh}
+    .controls-container{display:flex;flex-wrap:wrap;gap:20px;align-items:center;margin:15px 2.5%}
+    table{border-collapse:collapse;width:95%;max-width:1800px;margin:20px auto;font-size:14px}
+    th,td{padding:8px 10px;border:1px solid #eee;text-align:center}
+    th{background:#f2f2f2;position:sticky;top:0;font-weight:600}
+    #sunTimesTableContainer{width:95%;max-width:1800px;margin:20px auto}
+    #sunTimesTableContainer table{margin:0}
+    #solarSystemContainer{margin:40px auto;max-width:1000px;text-align:center}
+    #solarSystemCanvas{border:1px solid #ddd;background:#111}
+    h2{color:#333;margin-top:30px;margin-bottom:15px}
+  </style>
 </head>
 <body>
+<div id="urlHeader"><a href="https://bit.ly/jcweather">https://bit.ly/jcweather</a></div>
 
-    <h1></h1>
+<div class="chart-container">
+  <canvas id="weatherChart"></canvas>
+</div>
 
-    <div class="chart-container">
-        <canvas id="weatherChart"></canvas>
-    </div>
+<div id="sunTimesTableContainer"></div>
 
-    <script src="weather_plot.js"></script>
+<script>
+/*********************************************************************
+ * CONFIG
+ *********************************************************************/
+const cfg = {
+  defaultLocation:{name:"Älta, Sweden", latitude:59.26, longitude:18.18},
+  weatherSource:{name:"MET Norway", url:"https://api.met.no/weatherapi/locationforecast/2.0/compact"},
+  userAgent:"MyWeatherApp/1.2 contact@example.com"
+};
+let currentLocation = {...cfg.defaultLocation};
+let weatherChart;
 
+/*********************************************************************
+ * HELPERS  (DOM reuse)
+ *********************************************************************/
+const $ = id => document.getElementById(id);
+const make = (tag, opts={}) => Object.assign(document.createElement(tag), opts);
+
+function clearContainer(id){
+  const el = $(id);
+  if(el){el.innerHTML='';return el;}
+  return make('div',{id});
+}
+
+/*********************************************************************
+ * GEO-CODING
+ *********************************************************************/
+async function geocodeLocation(name){
+  try{
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(name)}`);
+    if(!r.ok) throw new Error(r.statusText);
+    const data = await r.json();
+    if(!data.length) throw new Error("Location not found");
+    return {name:data[0].display_name, latitude:+data[0].lat, longitude:+data[0].lon};
+  }catch(e){
+    alert("Geocoding: "+e.message);
+    return null;
+  }
+}
+
+/*********************************************************************
+ * WEATHER FETCH
+ *********************************************************************/
+function buildUrl(){return `${cfg.weatherSource.url}?lat=${currentLocation.latitude}&lon=${currentLocation.longitude}`;}
+
+async function getWeatherData(timeSpan=48){
+  const url = buildUrl();
+  try{
+    const r = await fetch(url,{headers:{'User-Agent':cfg.userAgent}});
+    if(!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+    const data = await r.json();
+    processWeatherData(data, timeSpan);
+    $('currentLocationDisplay').textContent = currentLocation.name;
+  }catch(err){
+    console.error(err);
+    clearContainer('weatherChart').innerHTML = `<p style="color:red">Error: ${err.message}</p>`;
+  }
+}
+
+/*********************************************************************
+ * GAPS & INTERPOLATION
+ *********************************************************************/
+function interpolate(arr, key){
+  for(let i=0;i<arr.length;i++){
+    if(arr[i][key]==null){
+      let j=i+1; while(j<arr.length && arr[j][key]==null) j++;
+      const prev = i>0?arr[i-1][key]:null;
+      const next = j<arr.length?arr[j][key]:null;
+      if(prev!=null && next!=null){
+        const step = (next-prev)/(j-i+1);
+        for(let k=i;k<j;k++) arr[k][key] = prev+step*(k-i+1);
+      }else{
+        for(let k=i;k<j;k++) arr[k][key] = prev!=null?prev:next;
+      }
+      i=j-1;
+    }
+  }
+}
+
+/*********************************************************************
+ * PROCESS & DRAW CHART
+ *********************************************************************/
+function processWeatherData(apiData, timeSpan){
+  if(!apiData.properties?.timeseries) return;
+  const series = apiData.properties.timeseries;
+  const now = new Date(), end = new Date(now.getTime()+timeSpan*3600e3);
+
+  // pick raw points
+  const raw = series.filter(s=>{
+    const t = new Date(s.time);
+    return t>=now && t<=end;
+  }).map(s=>({
+    time:new Date(s.time),
+    temp:s.data.instant.details.air_temperature ?? null,
+    rain:s.data.next_1_hours?.details?.precipitation_amount ?? 0,
+    cloud:s.data.instant.details.cloud_area_fraction ?? null,
+    wind:s.data.instant.details.wind_speed ?? null
+  }));
+
+  // close gaps
+  interpolate(raw,'temp');
+  interpolate(raw,'cloud');
+  interpolate(raw,'wind');
+
+  // build labels & datasets
+  const labels=[], temps=[], rain=[], clouds=[], wind=[];
+  raw.forEach(p=>{
+    if(p.temp==null) return;
+    labels.push(p.time);
+    temps.push(p.temp);
+    rain.push(p.rain);
+    clouds.push(p.cloud);
+    wind.push(p.wind);
+  });
+
+  // sunrise/sunset markers
+  const sunTimes = [];
+  for(let i=0;i<Math.ceil(timeSpan/24);i++){
+    const d=new Date(now); d.setDate(d.getDate()+i);
+    sunTimes.push({...SunCalc.getTimes(d,currentLocation.latitude,currentLocation.longitude),date:d});
+  }
+
+  // reference lines
+  const refLine = val => labels.map(()=>val);
+
+  // chart
+  if(weatherChart) weatherChart.destroy();
+  const ctx=$('weatherChart').getContext('2d');
+  weatherChart = new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'Temperature (°C)', data:temps, type:'line', yAxisID:'yTemp', borderWidth:4,
+         segment:{borderColor:ctx=>{
+           const v=ctx.p1.parsed.y;
+           return v==null?'rgba(0,0,0,0.1)':
+            v<=-10?'rgb(0,0,255)':
+            v<=0?'rgb(0,200,255)':
+            v<=10?'rgb(0,255,0)':
+            v<=20?'rgb(255,255,0)':
+            v<=25?'rgb(255,165,0)':'rgb(255,0,0)';
+         }},
+         spanGaps:false},
+        {label:'Precipitation (mm)', data:rain, backgroundColor:'rgba(54,162,235,0.6)', yAxisID:'yRain', order:2},
+        {label:'Cloud Cover %', data:clouds, type:'line', borderColor:'#888', yAxisID:'yCloud', fill:true, order:0},
+        {label:'Wind m/s', data:wind, type:'line', borderColor:'#0cc', yAxisID:'yWind', borderWidth:3, order:3},
+        {label:'0°C', data:refLine(0), type:'line', borderColor:'rgba(0,0,255,0.4)', borderDash:[5,5], pointRadius:0, yAxisID:'yTemp', tooltip: {enabled: false}},
+        {label:'10°C', data:refLine(10), type:'line', borderColor:'rgba(0,175,0,0.4)', borderDash:[5,5], pointRadius:0, yAxisID:'yTemp', tooltip: {enabled: false}},
+        {label:'20°C', data:refLine(20), type:'line', borderColor:'rgba(255,165,0,0.4)', borderDash:[5,5], pointRadius:0, yAxisID:'yTemp', tooltip: {enabled: false}}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index', intersect:false},
+      layout: {
+        padding: {
+          bottom: 35 // Add extra padding at the bottom for day labels
+        }
+      },
+      plugins:{
+        legend:{position:'top'},
+        sunMoonMarker:{sunTimes},
+        dayLabelsPlugin:true,
+        tooltip: {
+          filter: (tooltipItem) => {
+            // Filter out reference lines (0°C, 10°C, 20°C)
+            const datasetLabel = tooltipItem.dataset.label;
+            return !datasetLabel.includes('°C'); // Exclude datasets with °C in the label
+          },
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          bodyColor: '#333',
+          borderColor: '#ccc',
+          borderWidth: 1,
+          padding: 12,
+          displayColors: true,
+          boxWidth: 12,
+          boxHeight: 12,
+          usePointStyle: true,
+          callbacks: {
+            title: (context) => {
+              // Format the tooltip title to show date and time
+              const date = new Date(context[0].parsed.x);
+              return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+            },
+            label: (context) => {
+              let label = context.dataset.label || '';
+              
+              if (label) {
+                label += ': ';
+              }
+              
+              // Format the value based on dataset type
+              if (label.includes('Temperature')) {
+                return label + context.parsed.y.toFixed(1) + '°C';
+              } else if (label.includes('Precipitation')) {
+                return label + context.parsed.y.toFixed(1) + ' mm';
+              } else if (label.includes('Cloud Cover')) {
+                return label + context.parsed.y.toFixed(0) + '%';
+              } else if (label.includes('Wind')) {
+                return label + context.parsed.y.toFixed(1) + ' m/s';
+              }
+              
+              return label + context.parsed.y;
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          type:'time', 
+          time:{
+            unit:'hour', 
+            tooltipFormat:'yyyy-MM-dd HH:mm', 
+            displayFormats:{hour:'HH:mm', day:'EEE'},
+            stepSize: 6  // Force 6-hour steps
+          },
+          ticks:{
+            maxRotation:0,
+            source:'auto',
+            autoSkip:false,
+            major: {
+              enabled: true
+            },
+            callback: function(value, index, ticks) {
+              const date = new Date(value);
+              const hour = date.getHours();
+              // Only show labels at 6-hour intervals (00:00, 06:00, 12:00, 18:00)
+              if (hour % 6 === 0) {
+                return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+              }
+              return '';
+            }
+          },
+          grid:{
+            display: true,
+            drawBorder: true,
+            drawOnChartArea: true,
+            color: (context) => {
+              const value = context.tick?.value;
+              if (value) {
+                const date = new Date(value);
+                const hour = date.getHours();
+                // Only show grid at 6-hour intervals
+                if (hour % 6 === 0) {
+                  // Midnight gets darker lines
+                  return hour === 0 ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.1)';
+                }
+              }
+              return 'rgba(0,0,0,0)'; // Hide other gridlines
+            },
+            lineWidth: (context) => {
+              const value = context.tick?.value;
+              if (value) {
+                const date = new Date(value);
+                const hour = date.getHours();
+                // Only show grid at 6-hour intervals
+                if (hour % 6 === 0) {
+                  // Midnight gets thicker lines
+                  return hour === 0 ? 2 : 1;
+                }
+              }
+              return 0; // Hide other gridlines
+            }
+          }
+        },
+        yTemp:{position:'left', title:{display:true, text:'°C'}},
+        yRain:{position:'right', title:{display:true, text:'mm'}, grid:{drawOnChartArea:false}, suggestedMax:5},
+        yCloud:{position:'right', title:{display:true, text:'%'}, min:0, max:100, grid:{drawOnChartArea:false}},
+        yWind:{position:'right', title:{display:true, text:'m/s'}, grid:{drawOnChartArea:false}, suggestedMax:15}
+      }
+    }
+  });
+
+  // tables & diagram
+  renderSunTimesTable(sunTimes);
+  renderDataTable(labels,temps,rain,clouds,wind);
+  drawSolarSystem();
+}
+
+/*********************************************************************
+ * CHART PLUGIN – day labels below x-axis
+ *********************************************************************/
+Chart.register({
+  id:'dayLabelsPlugin',
+  afterDraw:(chart,args,options)=>{
+    const {ctx, chartArea, scales:{x}} = chart;
+    if(!x) return;
+    
+    ctx.save();
+    ctx.font = 'bold 12px Roboto';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#555';
+    
+    // We'll show day names for each midnight (00:00)
+    const start = new Date(x.min);
+    start.setHours(0, 0, 0, 0); // Set to midnight
+    
+    // Calculate end time (add a buffer day to ensure we cover the whole chart)
+    const end = new Date(x.max);
+    end.setDate(end.getDate() + 1);
+    
+    // Track days we've already labeled to avoid duplicates
+    const labeledDays = new Set();
+    
+    // Loop through each day
+    for(let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
+      // Get the x-position for this day's midnight
+      const xPos = x.getPixelForValue(day);
+      
+      // Format the day name (MON, TUE, etc.)
+      const dayName = day.toLocaleDateString('en-US', {weekday: 'short'}).toUpperCase();
+      const dayKey = day.toISOString().split('T')[0]; // Use date as key to avoid duplicates
+      
+      // Only draw if it's within the chart area and not already labeled
+      if(xPos >= chartArea.left && xPos <= chartArea.right && !labeledDays.has(dayKey)) {
+        // Add light background for better visibility
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.fillRect(xPos - 15, x.bottom + 12, 30, 18);
+        
+        // Draw the day name below the x-axis
+        ctx.fillStyle = '#333';
+        ctx.fillText(dayName, xPos, x.bottom + 25);
+        
+        labeledDays.add(dayKey);
+      }
+    }
+    ctx.restore();
+  }
+});
+
+/*********************************************************************
+ * CHART PLUGIN – sunrise / sunset markers
+ *********************************************************************/
+Chart.register({
+  id:'sunMoonMarker',
+  afterDraw:(chart,args,opt)=>{
+    const sunTimes = opt.sunTimes;
+    if(!sunTimes?.length) return;
+    const {ctx,chartArea,scales:{x}} = chart;
+    ctx.save();
+    ctx.font="12px Roboto";
+    sunTimes.forEach(st=>{
+      const sr = x.getPixelForValue(st.sunrise), ss = x.getPixelForValue(st.sunset);
+      ctx.fillStyle="orange"; ctx.fillText('☀', sr, x.bottom-10);
+      ctx.fillStyle="gray";   ctx.fillText('🌙', ss, x.bottom-10);
+    });
+    ctx.restore();
+  }
+});
+
+/*********************************************************************
+ * SUNRISE / SUNSET TABLE
+ *********************************************************************/
+function renderSunTimesTable(times){
+  const wrap = clearContainer('sunTimesTableContainer');
+  wrap.style.cssText='width:95%;max-width:1800px;margin:30px auto 20px auto';
+  wrap.innerHTML='<h2 style="text-align:center">Sunrise & Sunset Times</h2>';
+  
+  // Create a styled container for the table
+  const tableContainer = make('div');
+  tableContainer.style.cssText = 'box-shadow:0 2px 8px rgba(0,0,0,0.1);border-radius:6px;overflow:hidden;background:#fff;margin-bottom:20px';
+  
+  const tbl = make('table');
+  tbl.style.cssText = 'width:100%;margin:0';
+  tbl.innerHTML=`
+  <thead><tr style="background:#f5f5f5">
+    <th>Date</th><th>Day</th><th>Sunrise</th><th>Sunset</th><th>Daylight</th>
+  </tr></thead>`;
+  const tbody = make('tbody');
+  times.forEach((t,i)=>{
+    const tr = make('tr',{style:i%2?'background:#f9f9f9':''});
+    
+    // Calculate the daylight percentage for visualization
+    const dayMs = t.sunset - t.sunrise;
+    const dayHours = dayMs / (1000 * 60 * 60);
+    // Create a linear gradient representing daylight (yellow) vs night (blue)
+    const dayPct = Math.min(Math.max(dayHours / 24 * 100, 0), 100);
+    const nightPct = 100 - dayPct;
+    const gradientStyle = `background:linear-gradient(90deg, #ffedb5 ${dayPct}%, #d6e4ff ${dayPct}%)`;
+    
+    tr.innerHTML=`
+      <td>${t.date.toLocaleDateString('sv-SE')}</td>
+      <td>${t.date.toLocaleDateString('en-US',{weekday:'long'})}</td>
+      <td><span style="color:#e67e22">☀</span> ${t.sunrise.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td>
+      <td><span style="color:#7f8c8d">🌙</span> ${t.sunset.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td>
+      <td style="${gradientStyle};position:relative">
+        <span style="position:relative;z-index:1">${msToHMS(dayMs)}</span>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+  tableContainer.appendChild(tbl);
+  wrap.appendChild(tableContainer);
+}
+
+/*********************************************************************
+ * DATA TABLE + CSV
+ *********************************************************************/
+function renderDataTable(labels,temps,rain,clouds,wind){
+  const wrap = clearContainer('dataTableContainer');
+  wrap.style.cssText='width:95%;max-width:1800px;margin:30px auto;overflow-x:auto';
+  wrap.innerHTML=`
+    <h2 style="text-align:center">Weather Data Details</h2>
+    <p style="text-align:center;color:#555;margin-bottom:10px">
+      Full dataset below (max 500 rows shown). Use the button to download CSV.</p>`;
+  const tbl = make('table');
+  tbl.innerHTML=`
+  <thead><tr>
+    <th>Time</th><th>Date</th><th>Temp °C</th><th>Rain mm</th><th>Cloud %</th><th>Wind m/s</th>
+  </tr></thead>`;
+  const tbody = make('tbody');
+  const max = Math.min(labels.length,500);
+  for(let i=0;i<max;i++){
+    const tr=make('tr',{style:i%2?'background:#f9f9f9':''});
+    tr.innerHTML=`
+      <td>${labels[i].toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td>
+      <td>${labels[i].toLocaleDateString()}</td>
+      <td>${temps[i]?.toFixed(1)??'N/A'}</td>
+      <td>${rain[i]?.toFixed(1)??'0.0'}</td>
+      <td>${clouds[i]?.toFixed(0)??'N/A'}</td>
+      <td>${wind[i]?.toFixed(1)??'N/A'}</td>`;
+    tbody.appendChild(tr);
+  }
+  tbl.appendChild(tbody); wrap.appendChild(tbl);
+
+  // CSV export
+  const btn = make('button',{textContent:'Download CSV',style:'margin:15px 5px;padding:8px 16px;cursor:pointer'});
+  btn.onclick = () => {
+    let csv='Time,Date,Temperature °C,Precipitation mm,Cloud %,Wind m/s\n';
+    for(let i=0;i<labels.length;i++){
+      csv+=`${labels[i].toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})},${labels[i].toLocaleDateString()},${temps[i]?.toFixed(1)??''},${rain[i]?.toFixed(1)??''},${clouds[i]?.toFixed(0)??''},${wind[i]?.toFixed(1)??''}\n`;
+    }
+    const blob = new Blob([csv],{type:'text/csv'});
+    const a=make('a',{href:URL.createObjectURL(blob),download:`weather_${new Date().toISOString().slice(0,10)}.csv`});
+    a.click();
+  };
+  const back=make('button',{textContent:'Back to Top',style:'margin-left:10px;padding:8px 16px'});
+  back.onclick=()=>window.scrollTo({top:0,behavior:'smooth'});
+  wrap.append(btn,back);
+}
+
+function msToHMS(ms){
+  const h=Math.floor(ms/36e5),m=Math.floor(ms/6e4)%60;
+  const hours = h.toString().padStart(2, '0');
+  const mins = m.toString().padStart(2, '0');
+  return `${hours}h ${mins}m`;
+}
+
+/*********************************************************************
+ * SOLAR SYSTEM DIAGRAM  (VSOP87-WASM)
+ *********************************************************************/
+async function drawSolarSystem(){
+  await VSOP87.ready;          // tiny wasm module
+  const cvs=$('solarSystemCanvas')||make('canvas',{id:'solarSystemCanvas',width:1000,height:700});
+  const wrap = $('solarSystemContainer')||(()=>{
+    const w=make('div',{id:'solarSystemContainer'});
+    w.innerHTML='<h3>Planetary Positions (VSOP87)</h3>';
+    w.appendChild(cvs);
+    document.body.appendChild(w);
+    return w;
+  })();
+  const ctx=cvs.getContext('2d');
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  const cx=cvs.width/2, cy=cvs.height/2;
+  const now = new Date();
+  wrap.querySelector('h3').textContent=`Planetary positions for ${now.toLocaleString()} (VSOP87)`;
+
+  // VSOP87 gives heliocentric ecliptic longitude & latitude in radians
+  const planets = [
+    {name:'Mercury',color:'#aaa',size:3,dist:0.39},
+    {name:'Venus',color:'#ffcc33',size:4,dist:0.72},
+    {name:'Earth',color:'#33f',size:4,dist:1},
+    {name:'Mars',color:'#c33',size:3.5,dist:1.52},
+    {name:'Jupiter',color:'#ca9',size:8,dist:5.2},
+    {name:'Saturn',color:'#fc9',size:7,dist:9.58},
+    {name:'Uranus',color:'#9cf',size:6,dist:19.22},
+    {name:'Neptune',color:'#36f',size:6,dist:30.05}
+  ];
+  const scale=55;
+  // draw orbits
+  planets.forEach(p=>{
+    ctx.beginPath();
+    ctx.arc(cx,cy,p.dist*scale,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,255,255,0.15)';
+    ctx.stroke();
+  });
+  // draw planets
+  planets.forEach((p,idx)=>{
+    const {lon} = VSOP87.getPlanetPosition(idx, now);
+    const x = cx + Math.cos(lon)*p.dist*scale;
+    const y = cy + Math.sin(lon)*p.dist*scale;
+    ctx.beginPath();
+    ctx.arc(x,y,p.size,0,Math.PI*2);
+    ctx.fillStyle=p.color;
+    ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.font='12px Roboto';
+    ctx.fillText(p.name,x+p.size+2,y+4);
+  });
+}
+
+/*********************************************************************
+ * CONTROLS
+ *********************************************************************/
+function buildControls(){
+  const wrap=make('div',{className:'controls-container'});
+  // time span
+  const sel=make('select',{id:'timeSpanSelect'});
+  [24,72,168,240].forEach(h=>{
+    sel.appendChild(make('option',{value:h,textContent:`${h} hours`}));
+  });
+  sel.value=48;
+  sel.onchange=()=>getWeatherData(+sel.value);
+
+  // location
+  const inp=make('input',{id:'locationInput',placeholder:'City, Country'});
+  const btn=make('button',{textContent:'Update'});
+  const form=make('form');
+  form.onsubmit=async e=>{
+    e.preventDefault();
+    const loc = await geocodeLocation(inp.value.trim());
+    if(loc){currentLocation=loc; getWeatherData(+sel.value);}
+  };
+  form.append(inp,btn);
+
+  const locDiv=make('div',{style:'font-weight:bold;margin-bottom:5px',id:'currentLocationDisplay'});
+  const locFormDiv=make('div'); locFormDiv.append(locDiv,form);
+
+  wrap.append(make('label',{textContent:'Time span: '}),sel,locFormDiv);
+  document.querySelector('.chart-container').after(wrap);
+}
+
+/*********************************************************************
+ * INIT
+ *********************************************************************/
+buildControls();
+getWeatherData(48);
+</script>
 </body>
 </html>
